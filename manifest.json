@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Daily Coding Tracker Pro",
+  "version": "2.0",
+  "description": "Automatically tracks solved problems across LeetCode, Codeforces, CodeChef & HackerRank with accurate difficulty data.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "*://*.codechef.com/api/*",
+    "*://codeforces.com/api/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.leetcode.com/problems/*",
+        "*://*.leetcode.com/problems/*/submissions/*",
+        "*://*.hackerrank.com/challenges/*",
+        "*://*.hackerrank.com/domains/*",
+        "*://*.hackerrank.com/dashboard*",
+        "*://*.codechef.com/*",
+        "*://*.codeforces.com/problemset/problem/*",
+        "*://*.codeforces.com/contest/*/problem/*",
+        "*://*.codeforces.com/gym/*/problem/*",
+        "*://*.codeforces.com/problemset*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}
