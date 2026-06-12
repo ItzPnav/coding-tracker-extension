@@ -1,11 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  DCT — popup.js  (v2.0)
+//  DCT — popup.js  (v2.1)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 
 function parseTS(ts) {
-  // Handles both ISO strings (new) and legacy toLocaleString() values (old)
   if (!ts) return Date.now();
   const d = new Date(ts);
   return isNaN(d.getTime()) ? Date.now() : d.getTime();
@@ -37,11 +36,11 @@ function formatTimeTaken(openedAt, solvedAt) {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
 }
 
 function getItemDay(item) {
-  return new Date(parseTS(item.timestamp)).toISOString().slice(0, 10);
+  return new Date(parseTS(item.timestamp)).toLocaleDateString('en-CA');
 }
 
 function diffClass(d) {
@@ -69,7 +68,14 @@ function calcStreak(log) {
   if (!log.length) return 0;
   const daySet = new Set(log.map(p => getItemDay(p)));
   const days   = [...daySet].sort().reverse();
-  if (days[0] !== todayKey()) return 0;
+  
+  const today = todayKey();
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = d.toLocaleDateString('en-CA');
+
+  if (days[0] !== today && days[0] !== yesterday) return 0;
+  
   let streak = 1;
   for (let i = 1; i < days.length; i++) {
     const diff = Math.round(
@@ -120,11 +126,11 @@ function buildDetailedTxt(log) {
   const line = '═'.repeat(W);
 
   let txt  = `╔${line}╗\n`;
-  txt += `║  DCT — DETAILED LOG${' '.repeat(W - 20)}║\n`;
-  txt += `║  Day  : ${day.padEnd(W - 9)}║\n`;
-  txt += `║  Date : ${formatDate(now).padEnd(W - 9)}║\n`;
-  txt += `║  Time : ${formatTime(now).padEnd(W - 9)}║\n`;
-  txt += `║  Total: ${String(log.length).padEnd(W - 9)}║\n`;
+  txt += `║  DCT — DETAILED LOG${' '.repeat(W - 40)}║\n`;
+  txt += `║  Day  : ${day.padEnd(W - 27)}║\n`;
+  txt += `║  Date : ${formatDate(now).padEnd(W - 27)}║\n`;
+  txt += `║  Time : ${formatTime(now).padEnd(W - 27)}║\n`;
+  txt += `║  Total: ${String(log.length).padEnd(W - 27)}║\n`;
   txt += `╚${line}╝\n\n`;
 
   log.forEach((p, i) => {
@@ -179,30 +185,208 @@ function renderList(log) {
 // ── RENDER STATS ──────────────────────────────────────────────────────────────
 
 function renderStats(log) {
-  const today = log.filter(p => getItemDay(p) === todayKey()).length;
-  document.getElementById('stat-today').textContent  = today;
+  const todayCount = log.filter(p => getItemDay(p) === todayKey()).length;
+  const streak     = calcStreak(log);
+  
+  document.getElementById('stat-today').textContent  = todayCount;
   document.getElementById('stat-avg').textContent    = calcAvg(log);
-  document.getElementById('stat-streak').textContent = calcStreak(log);
+  document.getElementById('stat-streak').textContent = streak;
   document.getElementById('total-count').textContent = `TOTAL: ${log.length}`;
+
+  // ── STREAK FLAME LOGIC ──
+  const flame = document.getElementById('flame-svg');
+  const label = document.getElementById('streak-days-label');
+  
+  if (flame) {
+    flame.classList.remove('flame-active', 'flame-cold', 'flame-warm', 'flame-hot');
+    if (streak === 0) {
+      flame.classList.add('flame-cold');
+    } else {
+      flame.classList.add('flame-active');
+      if (streak >= 7) flame.classList.add('flame-hot');
+      else flame.classList.add('flame-warm');
+    }
+  }
+  if (label) label.textContent = streak === 1 ? 'day' : 'days';
+
+  // ── PLATFORM DISTRIBUTION LOGIC ──
+  const total = log.length;
+  const platforms = {
+    leetcode:   log.filter(p => p.platform === 'leetcode').length,
+    codeforces: log.filter(p => p.platform === 'codeforces').length,
+    codechef:   log.filter(p => p.platform === 'codechef').length,
+    hackerrank: log.filter(p => p.platform === 'hackerrank').length
+  };
+
+  const updateSeg = (id, key, cls) => {
+    const pct = total ? Math.round((platforms[key] / total) * 100) : 0;
+    document.querySelector(`.seg-${id}`).style.width = pct + '%';
+    document.getElementById(`leg-${id}`).textContent = pct + '%';
+  };
+
+  updateSeg('lc', 'leetcode');
+  updateSeg('cf', 'codeforces');
+  updateSeg('cc', 'codechef');
+  updateSeg('hr', 'hackerrank');
+}
+
+// ── CLOUD AUTH ────────────────────────────────────────────────────────────────
+
+function updateAuthUI(user, isSyncing = false) {
+  const badge   = document.getElementById('cloud-badge');
+  const status  = document.getElementById('cloud-status-text');
+  const email   = document.getElementById('user-email');
+  const loginBtn  = document.getElementById('btn-login');
+  const logoutBtn = document.getElementById('btn-logout');
+
+  if (user) {
+    badge.classList.remove('offline');
+    badge.classList.add('online');
+    status.textContent = isSyncing ? 'SYNCING...' : 'SYNC ON';
+    email.textContent  = user.email;
+    loginBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+  } else {
+    badge.classList.remove('online');
+    badge.classList.add('offline');
+    status.textContent = 'LOCAL ONLY';
+    email.textContent  = 'offline';
+    loginBtn.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+  }
+}
+
+async function syncCloudData(userId) {
+  if (!userId) return;
+  
+  // Get current user for UI update
+  chrome.storage.local.get(['user'], async (r) => {
+    updateAuthUI(r.user, true); 
+    const cloudLog = await SupabaseSync.pullHistory(userId);
+    
+    chrome.storage.local.get(['problemLog', 'user'], (result) => {
+      // 1. Deduplicate local log first
+      const rawLocal = result.problemLog || [];
+      const localLog = [];
+      const localIds = new Set();
+      rawLocal.forEach(p => {
+        if (p.problemId && !localIds.has(p.problemId)) {
+          localLog.push(p);
+          localIds.add(p.problemId);
+        }
+      });
+
+      let merged = [...localLog];
+      let mergedIds = new Set(localIds);
+      let addedCount = 0;
+
+      cloudLog.forEach(cloudItem => {
+        if (!cloudItem.problemId) return;
+        if (!mergedIds.has(cloudItem.problemId)) {
+          // Only merge cloud items from today — don't resurface cleared history into popup
+          if (getItemDay(cloudItem) !== todayKey()) return;
+          merged.push(cloudItem);
+          mergedIds.add(cloudItem.problemId);
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0 || localLog.length !== rawLocal.length) {
+        merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        chrome.storage.local.set({ problemLog: merged }, () => {
+          renderStats(merged);
+          renderList(merged);
+          updateAuthUI(result.user, false);
+        });
+      } else {
+        updateAuthUI(result.user, false);
+      }
+    });
+  });
+}
+
+async function fetchUserInfo(token) {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch (e) {
+    console.error('[DCT] Failed to fetch user info:', e);
+    return null;
+  }
+}
+
+async function handleLogin() {
+  try {
+    const SB_URL = 'https://dwksdyavbvtruxmupsom.supabase.co';
+    const REDIRECT_URL = 'https://success-page-for-dct.vercel.app/';
+    const authUrl = `${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(REDIRECT_URL)}`;
+
+    console.log('[DCT] Opening Vercel Auth Bridge...');
+    // Send to background.js so it can track the tab ID for auto-close
+    chrome.runtime.sendMessage({ action: 'start_auth', url: authUrl });
+
+  } catch (e) {
+    console.error('[DCT] Login failed:', e);
+    alert('Login failed: ' + (e.message || 'Check your configuration'));
+  }
+}
+
+function handleLogout() {
+  // Since we aren't using the library, we just clear local session
+  chrome.storage.local.remove(['user', 'isCloudEnabled'], () => {
+    updateAuthUI(null);
+    console.log('[DCT] Signed out (local session cleared).');
+  });
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.local.get(['problemLog'], (result) => {
+async function checkAndClearLog() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['lastClearTime', 'problemLog'], (result) => {
+      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+      
+      if (!result.lastClearTime) {
+        // First time: Initialize with today's date
+        chrome.storage.local.set({ lastClearTime: today }, () => resolve());
+        return;
+      }
+
+      if (result.lastClearTime !== today) {
+        // Clear log and update time
+        chrome.storage.local.set({ 
+          problemLog: [],
+          lastClearTime: today 
+        }, () => {
+          console.log('[DCT] New day detected (' + today + '). Log cleared automatically.');
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAndClearLog();
+
+  chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled'], (result) => {
     const log = result.problemLog || [];
     renderStats(log);
     renderList(log);
+    updateAuthUI(result.user);
+
+    if (result.isCloudEnabled && result.user?.id) {
+      syncCloudData(result.user.id);
+    }
   });
 
-  // ── URL .txt ───────────────────────────────────────────────────────────────
-  document.getElementById('btn-url').addEventListener('click', () => {
-    chrome.storage.local.get(['problemLog'], (result) => {
-      const log = result.problemLog || [];
-      if (!log.length) return alert('No problems logged yet!');
-      downloadTxt(buildUrlTxt(log), 'dct_urls.txt');
-    });
-  });
+  // ── Cloud Listeners ────────────────────────────────────────────────────────
+  document.getElementById('btn-login').addEventListener('click', handleLogin);
+  document.getElementById('btn-logout').addEventListener('click', handleLogout);
 
   // ── Detailed .txt ──────────────────────────────────────────────────────────
   document.getElementById('btn-log').addEventListener('click', () => {
@@ -211,6 +395,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!log.length) return alert('No problems logged yet!');
       downloadTxt(buildDetailedTxt(log), 'dct_detailed_log.txt');
     });
+  });
+
+  // ── View Full Database ─────────────────────────────────────────────────────
+  document.getElementById('btn-db').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('db-viewer.html') });
   });
 
   // ── Discord DM ─────────────────────────────────────────────────────────────
@@ -245,14 +434,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('about-body').classList.toggle('open');
     document.getElementById('about-arrow').classList.toggle('open');
   });
-
-  // ── Clear log (triggered from popup if a clear button is added) ────────────
-  const clearBtn = document.getElementById('clear-btn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (confirm('Delete ALL logged problems? This cannot be undone.')) {
-        chrome.storage.local.set({ problemLog: [] }, () => location.reload());
-      }
-    });
-  }
 });

@@ -1,0 +1,16 @@
+# Local Agent Data
+graphify-out/
+.gemini/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment & Secrets
+.env
+.env.local
+
+# Build/Temp (if any)
+node_modules/
+dist/
+*.log

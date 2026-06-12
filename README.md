@@ -1,79 +1,70 @@
-# 🖥️ **Daily Coding Tracker Pro**
+# 🏆 **Daily Coding Tracker Pro (DCT)**
 
-### *Chrome extension that auto-tracks competitive programming solves with difficulty intelligence*
+### *Automatic solve detection and difficulty tracking for major competitive programming platforms worldwide.*
 
 <div align="center">
-<img src="https://img.shields.io/badge/Platform-Chrome%20Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white">
-<img src="https://img.shields.io/badge/Manifest-V3-FF6F00?style=for-the-badge">
-<img src="https://img.shields.io/badge/Storage-chrome.storage.local-34A853?style=for-the-badge">
-<img src="https://img.shields.io/badge/Version-2.0-00d4ff?style=for-the-badge">
+<img src="https://img.shields.io/badge/Manifest-V3-00d4ff?style=for-the-badge">
+<img src="https://img.shields.io/badge/Logic-JavaScript-f7df1e?style=for-the-badge">
+<img src="https://img.shields.io/badge/UI-Neon_CSS-00ff88?style=for-the-badge">
+<img src="https://img.shields.io/badge/Storage-Local-ff8c00?style=for-the-badge">
 </div>
 
 ---
 
 # 📌 **Overview**
 
-**Daily Coding Tracker Pro (DCT)** is a Manifest V3 Chrome extension built for competitive programmers who want zero-friction, automatic logging of every problem they solve — across four major coding platforms — without ever lifting a finger.
+**Daily Coding Tracker Pro (DCT)** is a modern Chrome Extension designed for competitive programmers to log every successful solve without manual input.
 
 It uses:
 
-* **MutationObserver** — watches the DOM for solve events in real-time; no polling, no CPU drain
-* **Platform-specific difficulty APIs** — pulls actual difficulty data from Codeforces and CodeChef APIs; reads DOM classes on LeetCode and HackerRank
-* **`chrome.storage.local`** — persists the full problem log, API caches, and streak data locally across sessions
-* **Futuristic Popup UI** — Orbitron + Share Tech Mono fonts, neon glow aesthetic, animated scanlines, and colour-coded difficulty badges
+* **Manifest V3** — Modern extension standard ensuring high performance and security.
+* **MutationObserver** — High-performance DOM monitoring for zero-latency solve detection.
+* **Chrome Storage Local** — Fully private, locally-encrypted data persistence.
+* **Platform APIs** — Integration with Codeforces and CodeChef for accurate Elo ratings.
 
-> Built for grinders who want their coding history tracked automatically — not manually.
+> Fully local-first architecture — your solve history never leaves your machine.
 
 ---
 
 # 🧠 **Architecture**
 
 ```
-[User solves a problem in the browser tab]
-            ↓
-[content.js — injected by manifest.json per-platform URL match]
-            ↓
-┌─────────────────────────────────────────────────┐
-│  SOLVE DETECTION (MutationObserver)             │
-│  1. isSolvedNow() → scans bodyText for verdict  │
-│  2. observer.disconnect() + alreadyLogged guard  │
-│  3. getProblemName() → platform-specific selectors│
-└─────────────────────────────────────────────────┘
-            ↓
-┌─────────────────────────────────────────────────┐
-│  DIFFICULTY RESOLUTION (async, per platform)    │
-│  LeetCode   → DOM class text-difficulty-*       │
-│  HackerRank → span.difficulty + hrDiffCache     │
-│  CodeChef   → /api/contests/{CODE}/problems/{}  │
-│  Codeforces → /api/problemset.problems (cached) │
-└─────────────────────────────────────────────────┘
-            ↓
-[saveProblemToLog() → deduplicates by URL → chrome.storage.local]
-            ↓
-[popup.html / popup.js — renders stats, problem list, export tools]
+[ User Solves Problem on Platform (LeetCode/CF/CC/HR) ]
+              ↓
+[ MutationObserver Scans DOM for 'Accepted' Status ]
+              ↓
+┌──────────────────────────────────────────────┐
+│        DCT CONTENT SCRIPT (content.js)       │
+│  1. Identify Platform & Extract Problem ID   │
+│  2. Fetch Difficulty (DOM or Platform API)   │
+│  3. Deduplicate & Save to chrome.storage     │
+└──────────────────────────────────────────────┘
+              ↓
+[ Persistent Storage (problemLog array) ]
+              ↓
+┌──────────────────────────────────────────────┐
+│        DASHBOARD UI (popup.js / HTML)        │
+│  1. Compute Streaks & Daily Averages         │
+│  2. Render Neon UI & Difficulty Badges       │
+│  3. Provide Export & DB Viewer Access        │
+└──────────────────────────────────────────────┘
 ```
 
 ---
 
 # 🚀 **Features**
 
-### ⚡ Zero-Polling Detection
-Uses a `MutationObserver` on `document.body` to detect solve verdicts the instant they appear in the DOM. No `setInterval`, no page reloads — the observer fires once, disconnects itself, and sets an `alreadyLogged` flag to guarantee no double-firing.
+### 🏆 Automatic Detection
+Instantly detects successful solves on LeetCode, HackerRank, CodeChef, and Codeforces without requiring any manual logging or user interaction.
 
-### 🎯 Per-Platform Difficulty Intelligence
-Each platform has its own extractor. LeetCode reads a CSS class directly. HackerRank pre-scans challenge list pages and caches `{url → difficulty}` before the user even opens a problem. CodeChef and Codeforces hit their respective APIs and map numeric ratings to Easy / Medium / Hard / Expert using calibrated thresholds.
+### 📊 Live Statistics
+Calculates real-time metrics including daily solve streaks, overall averages, and difficulty distribution directly within the neon-themed popup dashboard.
 
-### 🔥 Streak Engine & Stats
-The popup computes a live daily streak (consecutive calendar days with ≥ 1 solve), daily average, and today's count — all derived from timestamps in the local log. No backend needed.
+### 🔍 Deep Difficulty Mapping
+Seamlessly integrates with official platform APIs to fetch precise Elo ratings and difficulty tiers, ensuring your solve history is accurately categorized.
 
-### 📤 Export & Discord DM
-Two `.txt` export formats: a clean URL list and a richly formatted tree-style detailed log. The Discord button copies today's solved URLs to clipboard and opens Discord DMs in one click.
-
-### 🔒 100% Local — No Accounts, No Servers
-All data lives in `chrome.storage.local`. Nothing is ever transmitted externally. The Codeforces problem map is cached locally after the first API hit so the CF API is never hammered more than once per browser session.
-
-### ⏱️ Time-Taken Tracking
-Every problem entry stores both `openedAt` (tab load time) and `timestamp` (solve time). The popup computes and displays the exact time spent per problem — down to seconds.
+### 📂 Local-First Database
+Keeps your entire solve history private on your machine using local storage, featuring detailed export options to TXT for backup or analysis.
 
 ---
 
@@ -81,77 +72,60 @@ Every problem entry stores both `openedAt` (tab load time) and `timestamp` (solv
 
 | Layer | Technology |
 |-------|------------|
-| Extension Platform | Chrome Extension — Manifest V3 |
-| Solve Detection | DOM `MutationObserver` API |
-| Difficulty Data | Codeforces API, CodeChef API, DOM selectors |
-| Persistence | `chrome.storage.local` (JSON log) |
-| UI Fonts | Orbitron, Share Tech Mono, Inter (Google Fonts) |
-| Export | Blob API + `URL.createObjectURL()` |
+| Manifest | Version 3 |
+| Logic | ES2020 JavaScript |
+| Styling | Vanilla CSS (Neon Design) |
+| Storage | chrome.storage.local |
+| Observability | MutationObserver API |
 
 ---
 
 # 📦 **Setup**
 
-1. **Clone the repo:**
+1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/ItzPnav/coding-tracker-extension.git
+git clone https://github.com/pnav/coding-tracker-extension.git
 cd coding-tracker-extension
 ```
 
-2. **Open Chrome extensions page:**
-
-```bash
-# Navigate to this URL in Chrome
-chrome://extensions/
-```
+2. **Open Chrome Extensions:**
+Navigate to `chrome://extensions/` in your browser.
 
 3. **Enable Developer Mode:**
+Toggle the "Developer mode" switch in the top-right corner of the page.
 
-Toggle **Developer Mode** on (top-right corner of the extensions page).
+4. **Load the Extension:**
+Click "Load unpacked" and select the `coding-tracker-extension` root folder.
 
-4. **Load the extension:**
-
-Click **Load Unpacked** and select the root `coding-tracker-extension/` folder.
-
-5. **Start solving problems:**
-
-```
-Navigate to LeetCode, Codeforces, CodeChef, or HackerRank.
-Solve any problem. Click the DCT icon in your toolbar to see it logged.
-```
+5. **Pin for Easy Access:**
+Click the puzzle icon in the Chrome toolbar and pin DCT for quick status checks.
 
 ---
 
 # 🛡️ **Production Tips**
 
-* Keep `host_permissions` scoped tightly — DCT only requests API access for `codechef.com/api/*` and `codeforces.com/api/*`, not broad wildcard permissions
-* The Codeforces problem map can grow large over time; consider adding a TTL-based cache invalidation for the `cfProblemMap` key in `chrome.storage.local`
-* If you fork and add a backend, never store the log in both local and remote simultaneously without a sync conflict strategy
-* For HackerRank contest pages (`/contests/*/challenges/*`), URL matches in `manifest.json` will need extending — this is a known pending item
+* Use the "Export Detailed Log" feature weekly to maintain a permanent record of your progress.
+* Keep the extension pinned to monitor your current daily streak at a glance.
+* For HackerRank, browse problem lists first to pre-cache difficulty data for faster logging.
 
 ---
 
 # 💡 **Roadmap**
 
-* [ ] **Problem ID deduplication** — use problem IDs instead of URLs to handle link variant edge cases
-* [ ] **Charts in popup** — bar / pie chart showing platform distribution (LeetCode vs Codeforces vs others)
-* [ ] **Filter & search** — search problems by name, platform, or difficulty in the popup list
-* [ ] **Supabase integration** — cross-browser sync with cloud persistence
-* [ ] **User authentication** — login to keep history forever
-* [ ] **Discord Webhook** — auto-post "Solved!" to a Discord channel (not just DM copy-paste)
-* [ ] **Native browser toast notifications** — on-screen notification when a problem is successfully logged
-* [ ] **Custom tags** — manually add tags like `#DP`, `#Graph`, `#BFS` to solved problems
-* [ ] **HackerRank contest page support** — extend manifest URL matches for `/contests/*/challenges/*`
-* [ ] **Clear log button** — `#clear-btn` is wired in `popup.js` but not yet surfaced in the popup HTML
+* [ ] **Supabase Integration**: Transition to cloud storage for seamless cross-browser history syncing.
+* [ ] **User Authentication**: Secure login system to preserve solve history across device changes.
+* [ ] **Discord Integration**: Automated "Solved!" notifications to personal Discord channels via Webhooks.
+* [ ] **Native Notifications**: Browser-level toast notifications upon successful problem logging.
+* [ ] **Custom Tagging**: Ability to manually tag problems (e.g., #DP, #Graph) directly in the UI.
 
 ---
 
 # 🔒 **Security Notes**
 
-* No API keys are used — all external API calls are to public, unauthenticated endpoints (Codeforces and CodeChef public APIs)
-* All solve data stays on-device in `chrome.storage.local` — nothing is transmitted to any external server
-* `host_permissions` in `manifest.json` are scoped to only the specific API paths needed, not full-domain wildcards
+* All solve data is strictly stored in your browser's local storage; no data is sent to external servers.
+* Host permissions are narrowly scoped to Codeforces and CodeChef APIs only for difficulty fetching.
+* Zero account requirement ensures your competitive programming profiles remain private.
 
 ---
 
@@ -160,44 +134,39 @@ Solve any problem. Click the DCT icon in your toolbar to see it logged.
 ```
 coding-tracker-extension/
 │
-├── 📁 MD files/
-│   ├── PROGRESS.md          # Feature tracker & milestone log
-│   └── FUTURE_FEATURES.md   # Full Phase 2–4 roadmap
-│
-├── 📁 docs/
-│   ├── Codeforces_Diff_Extraction.md   # CF API + rating classification research
-│   ├── codechef_diff_extract.md        # CodeChef API + difficulty mapping research
-│   └── dct - codechef difficulty extractio.txt  # Raw scratch notes
-│
-├── content.js       # Per-platform solve detection, difficulty APIs, openedAt tracking
-├── manifest.json    # Manifest V3 config — permissions, URL matches, host_permissions
-├── popup.html       # Futuristic popup UI — stats, problem list, buttons
-├── popup.js         # Stats calc, list render, exports, Discord DM logic
-└── README.md
+├── MD files/          # Project guidelines, roadmap, and build rules
+├── docs/              # Research notes and platform-specific API docs
+├── content.js         # Core solve detection and scraping logic
+├── popup.js           # Dashboard logic, stats calculation, and rendering
+├── popup.html         # Main extension popup interface
+├── db-viewer.js       # Standalone database viewer logic
+├── db-viewer.html     # Full-page database management interface
+├── manifest.json      # Extension configuration and permissions
+└── README.md          # Project documentation (regenerated)
 ```
 
 ---
 
 # 🤝 **Contributing**
 
-PRs and issues are welcome. Fork freely and build on top of this.
+PRs and issues are welcome. Feel free to fork the repository and contribute to the roadmap or add support for new platforms.
 
 ---
 
 # 📜 **License**
 
-MIT License — use freely.
+MIT License — feel free to use and modify for personal or public projects.
 
 ---
 
 # ❤️ **Credits**
 
-* [Codeforces Public API](https://codeforces.com/apiHelp) — problem ratings and metadata
-* [CodeChef Contest API](https://www.codechef.com/api/contests/) — difficulty ratings per problem
-* [Google Fonts — Orbitron & Share Tech Mono](https://fonts.google.com/) — UI typography
+* **Orbitron & Share Tech Mono** — Typography from Google Fonts.
+* **Codeforces API** — Official API for problem rating extraction.
+* **CodeChef API** — Official API for difficulty categorization.
 
 ---
 
 # 🚀 Made with passion by **pnav**
 
-> *Track every solve, never break the chain.*
+> *Tracks every solve, every streak, every grind — automatically.*

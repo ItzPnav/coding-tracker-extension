@@ -1,7 +1,7 @@
 # 📊 DCT — Project Progress Tracking
 
 > **Daily Coding Tracker Pro** | Manifest V3 Chrome Extension  
-> Current Version: `v2.0` | Last Updated: April 2026
+> Current Version: `v2.1` | Last Updated: May 2026
 
 ---
 
@@ -12,8 +12,11 @@
 |---|---|---|
 | Manifest V3 Setup | ✅ Done | Storage permission + host_permissions for APIs |
 | Content Script Injection | ✅ Done | Per-platform URL matching in `manifest.json` |
+| HackerRank Contest Pages | ✅ Done | Contest-specific URLs (`/contests/*/challenges/*`) in `manifest.json` |
 | `chrome.storage.local` System | ✅ Done | JSON-based log persisted across sessions |
+| 24h Auto-Clear Log | ✅ Done | Automatically wipes `problemLog` every 24 hours |
 | Deduplication Guard | ✅ Done | Prevents double-logging on same URL per session |
+| **Problem Deduplication** | ✅ Done | Uses unique Problem IDs (slugs/codes) instead of URLs |
 
 ---
 
@@ -22,7 +25,7 @@
 | Platform | Success Detection | Difficulty Method | Status |
 |---|---|---|---|
 | **LeetCode** | `Accepted` banner (DOM text) | `[class*="text-difficulty-*"]` element query | ✅ Done |
-| **HackerRank** | `You solved this challenge` / `Congratulations` | Live DOM `span.difficulty` + pre-click cache | ✅ Done |
+| **HackerRank** | `You solved this challenge` / `Congratulations` | Live DOM + slug-based pre-click cache | ✅ Done |
 | **CodeChef** | `Accepted` / `Correct Answer` | `/api/contests/{CONTEST}/problems/{CODE}` API | ✅ Done |
 | **Codeforces** | `Accepted` verdict | `codeforces.com/api/problemset.problems` (cached) | ✅ Done |
 
@@ -31,7 +34,7 @@
 ### 🧠 Difficulty Intelligence
 
 - [x] **LeetCode** — Direct DOM element query on `text-difficulty-easy/medium/hard` class
-- [x] **HackerRank Pre-Click Scan** — Scans challenge list pages for `span.difficulty`, caches `{url → difficulty}` in `hrDiffCache` before user opens a problem
+- [x] **HackerRank Pre-Click Scan** — Scans challenge list pages for slugs, caches `{slug → difficulty}` in `hrDiffCache`
 - [x] **CodeChef API Integration** — Fetches `difficulty_rating` from hidden API; maps numeric rating to Easy / Medium / Hard using the following thresholds:
   ```
   rating < 1400       → Easy
@@ -41,9 +44,9 @@
 - [x] **Codeforces API Integration** — Fetches full `problemset.problems` response once, caches entire map in `cfProblemMap`; handles all URL variants (`/problemset/`, `/contest/`, `/gym/`):
   ```
   rating < 1200       → Easy
-  1200 ≤ rating < 1700 → Medium
-  1700 ≤ rating < 2300 → Hard
-  rating ≥ 2300        → Expert
+  1200 ≤ rating < 1600 → Medium
+  1600 ≤ rating < 2000 → Hard
+  rating ≥ 2000        → Expert
   ```
 
 ---
@@ -57,6 +60,7 @@
 - [x] **`openedAt`** — ISO timestamp captured at page load (when tab opened)
 - [x] **`timestamp`** — ISO timestamp captured at moment of solve
 - [x] **Time Taken** — Derived from `openedAt` → `timestamp` delta (computed in `popup.js`)
+- [x] **`problemId`** — Platform-specific unique ID for bulletproof deduplication
 
 ---
 
@@ -72,12 +76,14 @@
 - [x] **Discord DM Button** — Copies today's solved URLs to clipboard, then opens Discord `@me`
 - [x] **About Section** — Collapsible panel with 4 feature highlight chips
 - [x] **Legacy Timestamp Compatibility** — `parseTS()` handles both old `toLocaleString()` and new ISO strings
+- [x] **Streak Visualization** — Animated SVG "Flame" icon with Cold/Warm/Hot intensity states
+- [x] **Data Insights** — CSS-based platform distribution bar showing % breakdown of activity
 
 ---
 
 ### 🔧 Technical Milestones
 
-- [x] Non-redundant logging system (deduplication by URL)
+- [x] Non-redundant logging system (deduplication by problemId)
 - [x] `MutationObserver` pattern for SPA compatibility (no polling)
 - [x] `observer.disconnect()` + `alreadyLogged` flag to prevent double-firing on same tab
 - [x] Async difficulty resolution — API calls awaited before saving to log
@@ -90,18 +96,11 @@
 
 ## 🚧 In Progress / Pending
 
-- [ ] **Popup UI — Clear Button** — `#clear-btn` wired in `popup.js` but not yet added to `popup.html` layout
-- [ ] **HackerRank Contest Pages** — Contest-specific URLs (`/contests/*/challenges/*`) not yet in `manifest.json` matches
 - [ ] **CodeChef Contest Problems** — API contest code auto-detection needs testing across non-PRACTICE contests
 
 ---
 
 ## 🗺️ Upcoming Roadmap
-
-### Phase 2 — Enhanced Local Experience
-- [ ] Problem ID-based deduplication (instead of URL) for accuracy across link variants
-- [ ] Bar / Pie chart in popup showing platform distribution
-- [ ] Filter/search problems in popup list
 
 ### Phase 3 — Cloud & Sync
 - [ ] Supabase integration — cross-browser sync
@@ -121,7 +120,7 @@ coding-tracker-extension/
 │
 ├── 📁 MD files/
 │   ├── 📝 PROGRESS.md              ← this file — feature tracker & milestones
-│   └── 📝 FUTURE_FEATURES.md       ← full roadmap (Phase 2 → Phase 4)
+│   └── 📝 FUTURE_FEATURES.md       ← full roadmap (Phase 3 → Phase 4)
 │
 ├── 📁 docs/
 │   ├── 📝 Codeforces_Diff_Extraction.md     ← CF API + rating classification research
@@ -129,8 +128,10 @@ coding-tracker-extension/
 │   └── 📄 dct - codechef difficulty extractio.txt  ← raw notes / scratch
 │
 ├── 📝 README.md            ← setup guide, feature overview, installation steps
-├── 📄 content.js           ← v2.0 — per-platform detection, difficulty APIs, openedAt
-├── ⚙️ manifest.json        ← v2.0 — host_permissions, updated URL matches
-├── 🌐 popup.html           ← v2.0 — futuristic UI, all 6 sections
-└── 📄 popup.js             ← v2.0 — stats, render, downloads, Discord DM
+├── 📄 content.js           ← v2.1 — per-platform detection, difficulty APIs, unique IDs
+├── ⚙️ manifest.json        ← v2.1 — host_permissions, updated URL matches
+├── 📄 db-viewer.js         ← v2.1 — standalone logic for database viewer
+├── 🌐 db-viewer.html       ← v2.1 — futuristic DB viewer (CSP compliant)
+├── 🌐 popup.html           ← v2.1 — futuristic UI, distribution bar, streak flame
+└── 📄 popup.js             ← v2.1 — stats, render, downloads, distribution logic
 ```
