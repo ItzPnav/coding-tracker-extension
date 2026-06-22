@@ -5,11 +5,13 @@
   "description": "Automatically tracks solved problems across LeetCode, Codeforces, CodeChef & HackerRank with accurate difficulty data.",
   "permissions": ["storage", "tabs", "identity"],
   "host_permissions": [
-    "*://*.codechef.com/api/*",
-    "*://codeforces.com/api/*",
-    "https://*.supabase.co/*"
-    ],
-    "icons": {
+    "https://*.codechef.com/api/*",
+    "https://codeforces.com/api/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*",
+    "https://firestore.googleapis.com/*"
+  ],
+  "icons": {
     "16": "icons/icon.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
@@ -41,10 +43,11 @@
         "*://*.codeforces.com/contest/*/problem/*",
         "*://*.codeforces.com/gym/*/problem/*",
         "*://*.codeforces.com/problemset*",
-        "https://dwksdyavbvtruxmupsom.supabase.co/*",
+        "https://*.firebaseapp.com/*",
+        "https://*.web.app/*",
         "https://success-page-for-dct.vercel.app/*"
       ],
-      "js": ["supabase-sync.js", "content.js"]
+      "js": ["firebase-sync.js", "content.js"]
     }
   ]
 }

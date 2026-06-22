@@ -262,7 +262,7 @@ async function syncCloudData(userId) {
   // Get current user for UI update
   chrome.storage.local.get(['user'], async (r) => {
     updateAuthUI(r.user, true); 
-    const cloudLog = await SupabaseSync.pullHistory(userId);
+    const cloudLog = await FirebaseSync.pullHistory(userId);
     
     chrome.storage.local.get(['problemLog', 'user'], (result) => {
       // 1. Deduplicate local log first
@@ -319,11 +319,19 @@ async function fetchUserInfo(token) {
 
 async function handleLogin() {
   try {
-    const SB_URL = 'https://dwksdyavbvtruxmupsom.supabase.co';
-    const REDIRECT_URL = 'https://success-page-for-dct.vercel.app/';
-    const authUrl = `${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(REDIRECT_URL)}`;
+    if (FIREBASE_CONFIG.googleClientId === 'YOUR_GOOGLE_CLIENT_ID' || FIREBASE_CONFIG.projectId === 'YOUR_FIREBASE_PROJECT_ID') {
+      alert('Please configure your Firebase credentials in firebase-sync.js first!');
+      return;
+    }
 
-    console.log('[DCT] Opening Vercel Auth Bridge...');
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth` +
+      `?client_id=${encodeURIComponent(FIREBASE_CONFIG.googleClientId)}` +
+      `&redirect_uri=${encodeURIComponent(FIREBASE_CONFIG.redirectUrl)}` +
+      `&response_type=id_token` +
+      `&scope=openid%20email%20profile` +
+      `&nonce=${Math.random().toString(36).substring(2)}`;
+
+    console.log('[DCT] Opening Google Auth via Firebase Hosting Redirect...');
     // Send to background.js so it can track the tab ID for auto-close
     chrome.runtime.sendMessage({ action: 'start_auth', url: authUrl });
 
@@ -334,8 +342,8 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-  // Since we aren't using the library, we just clear local session
-  chrome.storage.local.remove(['user', 'isCloudEnabled'], () => {
+  // Clear local session and Firebase tokens
+  chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at'], () => {
     updateAuthUI(null);
     console.log('[DCT] Signed out (local session cleared).');
   });

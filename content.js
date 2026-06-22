@@ -344,7 +344,7 @@ async function saveProblemToLog(data) {
       // ── CLOUD PUSH ──
       if (result.isCloudEnabled && result.user?.id) {
         console.log('[DCT-Cloud] Pushing solve to cloud...');
-        SupabaseSync.pushSolve(data, result.user.id);
+        FirebaseSync.pushSolve(data, result.user.id);
       }
     }
   } finally {

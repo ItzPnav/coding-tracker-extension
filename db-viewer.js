@@ -246,7 +246,7 @@ async function init() {
     if (result.isCloudEnabled && result.user?.id) {
       if (titleEl) titleEl.textContent = 'SYNCING CLOUD DATABASE...';
       
-      const cloudLog = await SupabaseSync.pullHistory(result.user.id);
+      const cloudLog = await FirebaseSync.pullHistory(result.user.id);
       
       if (cloudLog && cloudLog.length > 0) {
         // 2. Merge cloud into local, ensuring absolute uniqueness

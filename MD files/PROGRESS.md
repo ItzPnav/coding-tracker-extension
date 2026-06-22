@@ -103,8 +103,8 @@
 ## 🗺️ Upcoming Roadmap
 
 ### Phase 3 — Cloud & Sync
-- [ ] Supabase integration — cross-browser sync
-- [ ] User authentication — persistent history
+- [x] Firebase integration — cross-browser sync
+- [x] User authentication — persistent history
 
 ### Phase 4 — Social & Notifications
 - [ ] Discord Webhook — auto-post "Solved!" to a channel
@@ -128,8 +128,10 @@ coding-tracker-extension/
 │   └── 📄 dct - codechef difficulty extractio.txt  ← raw notes / scratch
 │
 ├── 📝 README.md            ← setup guide, feature overview, installation steps
+├── 📄 background.js        ← v2.1 — background service worker for OAuth and tab management
 ├── 📄 content.js           ← v2.1 — per-platform detection, difficulty APIs, unique IDs
-├── ⚙️ manifest.json        ← v2.1 — host_permissions, updated URL matches
+├── 📄 firebase-sync.js     ← v2.1 — lightweight Firebase REST client and login handler
+├── ⚙️ manifest.json        ← v2.1 — host permissions, OAuth2 scope, and content script matches
 ├── 📄 db-viewer.js         ← v2.1 — standalone logic for database viewer
 ├── 🌐 db-viewer.html       ← v2.1 — futuristic DB viewer (CSP compliant)
 ├── 🌐 popup.html           ← v2.1 — futuristic UI, distribution bar, streak flame
