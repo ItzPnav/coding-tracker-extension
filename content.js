@@ -76,28 +76,114 @@ function getLeetCodeDifficulty() {
   return 'N/A';
 }
 
-// ── HackerRank ───────────────────────────────────────────────────────────────
-function getHackerRankDifficulty() {
-  // Try sidebar on problem page first
-  const el = document.querySelector('span.difficulty');
-  if (el) {
-    const txt = el.textContent.trim();
-    if (/easy/i.test(txt))   return 'Easy';
-    if (/medium/i.test(txt)) return 'Medium';
-    if (/hard/i.test(txt))   return 'Hard';
+function findLeetCodeSubmissionHistoryEntry() {
+  const elements = Array.from(document.querySelectorAll('span, div'));
+  for (const el of elements) {
+    const text = el.textContent || '';
+    if (text.includes('submitted at')) {
+      let ancestor = el;
+      // Search up to 4 parent levels for the username profile link
+      for (let i = 0; i < 4; i++) {
+        if (!ancestor || ancestor === document.body) break;
+        const profileLink = ancestor.querySelector('a[href^="/u/"], a[href*="/u/"]');
+        if (profileLink) {
+          const href = profileLink.getAttribute('href');
+          const match = href.match(/\/u\/([^/]+)/);
+          if (match && match[1]) {
+            const username = match[1].trim();
+            const fullText = ancestor.textContent.replace(/\s+/g, ' ').trim();
+            const patternStr = `${username} submitted at`;
+            if (fullText.includes(patternStr)) {
+              const index = fullText.indexOf('submitted at');
+              const timestampPart = fullText.substring(index + 'submitted at'.length).trim();
+              // Match timestamp (e.g. "Jun 22, 2026 19:01")
+              const timeMatch = timestampPart.match(/^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}\s+\d{2}:\d{2}/);
+              if (timeMatch) {
+                return {
+                  username: username,
+                  timestampStr: timeMatch[0]
+                };
+              }
+            }
+          }
+        }
+        ancestor = ancestor.parentElement;
+      }
+    }
+  }
+  return null;
+}
+
+function isSuccessfulLeetCodeSubmission() {
+  const entry = findLeetCodeSubmissionHistoryEntry();
+  if (!entry) {
+    console.log('[LC]\n\nSubmission history entry not detected.');
+    return false;
   }
 
-  // Fallback: class-based
-  const byClass = document.querySelector(
-    '.difficulty.easy, .difficulty.medium, .difficulty.hard'
+  console.log(
+    '[LC]\n\nSubmission history entry detected.\n\nUser:\n' +
+    entry.username +
+    '\n\nTimestamp:\n' +
+    entry.timestampStr +
+    '\n\nRecording solve.'
   );
-  if (byClass) {
-    if (byClass.classList.contains('easy'))   return 'Easy';
-    if (byClass.classList.contains('medium')) return 'Medium';
-    if (byClass.classList.contains('hard'))   return 'Hard';
+  return true;
+}
+
+async function getHackerRankDifficultyFromAPI(slug) {
+  if (!slug) return 'N/A';
+
+  // 1. Check local cache first
+  const storage = await getStorage(['hrDiffCache']);
+  const cache = storage.hrDiffCache || {};
+  if (cache[slug]) {
+    console.log('[DCT-HR] Found cached difficulty for:', slug, '->', cache[slug]);
+    return cache[slug];
   }
 
-  return 'N/A';
+  // 2. Fetch from HackerRank internal REST API
+  const url = `https://www.hackerrank.com/rest/contests/master/challenges/${slug}`;
+  console.log('[DCT-HR] Fetching challenge metadata for:', slug);
+
+  let responseData = null;
+  let attempts = 2;
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      responseData = await res.json();
+      break; // Success
+    } catch (e) {
+      console.warn(`[DCT-HR] Fetch attempt ${i + 1} failed:`, e);
+      if (i < attempts - 1) {
+        // Wait 500ms before retry
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+  }
+
+  if (!responseData || !responseData.model) {
+    console.warn('[DCT-HR] API response empty or invalid, fallback to N/A');
+    return 'N/A';
+  }
+
+  // Map difficulty name
+  const diffName = responseData.model.difficulty_name;
+  let difficulty = 'N/A';
+
+  if (/easy/i.test(diffName))   difficulty = 'Easy';
+  else if (/medium/i.test(diffName)) difficulty = 'Medium';
+  else if (/hard/i.test(diffName))   difficulty = 'Hard';
+  else if (/expert/i.test(diffName)) difficulty = 'Expert';
+
+  // 3. Cache the resolved difficulty
+  cache[slug] = difficulty;
+  await setStorage({ hrDiffCache: cache });
+  console.log('[DCT-HR] Fetched & cached difficulty:', slug, '->', difficulty);
+
+  return difficulty;
 }
 
 // ── CodeChef ──────────────────────────────────────────────────────────────────
@@ -205,17 +291,7 @@ function isSolvedNow() {
 
   switch (PLATFORM) {
     case 'leetcode': {
-      const hasAccepted = /\bAccepted\b/i.test(bodyText);
-      if (!hasAccepted) return false;
-
-      const onSubmissionsPage = /\/submissions\//.test(window.location.pathname);
-      const hasInitialHint = /You must run your code first/i.test(bodyText);
-      const hasFailureVerdict = /(Wrong Answer|Time Limit Exceeded|Runtime Error|Memory Limit Exceeded|Compile Error)/i.test(bodyText);
-
-      if (!onSubmissionsPage && hasInitialHint) return false;
-      if (hasFailureVerdict) return false;
-
-      return true;
+      return isSuccessfulLeetCodeSubmission();
     }
     case 'hackerrank': {
       // Scope detection to the submission result container only.
@@ -346,6 +422,9 @@ async function saveProblemToLog(data) {
         console.log('[DCT-Cloud] Pushing solve to cloud...');
         FirebaseSync.pushSolve(data, result.user.id);
       }
+
+      // ── CONGRATS CARD ──
+      injectCongratsCard(data);
     }
   } finally {
     isSaving = false;
@@ -410,42 +489,239 @@ function injectAlreadySolvedAlert(date) {
   alertDiv.innerHTML = `
     <div style="
       position: fixed; top: 20px; right: 20px; z-index: 999999;
-      background: #060a10; border: 1px solid #00d4ff; border-radius: 8px;
-      padding: 12px 16px; width: 260px;
-      box-shadow: 0 0 20px rgba(0,212,255,0.2);
+      background: #060a10; border: 2px solid #00d4ff; border-radius: 10px;
+      padding: 20px; width: 340px;
+      box-shadow: 0 0 25px rgba(0,212,255,0.3);
       font-family: 'Share Tech Mono', monospace; color: #c8dff0;
-      animation: slideIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      animation: dctSlideInAlert 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
     ">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <span style="color: #ff8c00; font-size: 16px;">⚠️</span>
-        <span style="color: #00d4ff; font-weight: bold; letter-spacing: 1px; font-size: 12px;">SIGNAL DETECTED</span>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <span style="color: #ff8c00; font-size: 20px; filter: drop-shadow(0 0 5px #ff8c00);">⚠️</span>
+        <span style="
+          color: #00d4ff; font-weight: bold; letter-spacing: 2px; font-size: 14px;
+          font-family: 'Orbitron', sans-serif; text-shadow: 0 0 8px #00d4ff;
+        ">SIGNAL DETECTED</span>
       </div>
-      <div style="font-size: 11px; line-height: 1.4; opacity: 0.9;">
-        You already solved this problem on <span style="color: #00ff88;">${date}</span>.
+      <div style="font-size: 13px; line-height: 1.5; opacity: 0.95; margin-bottom: 15px;">
+        You already solved this problem on <span style="color: #00ff88; font-weight: bold;">${date}</span>.
       </div>
       <button id="dct-close-alert" style="
-        margin-top: 10px; width: 100%; padding: 6px;
-        background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2);
-        color: #00d4ff; font-family: 'Share Tech Mono', monospace; font-size: 10px;
-        cursor: pointer; transition: all 0.2s; border-radius: 4px;
+        width: 100%; padding: 8px;
+        background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.25);
+        color: #00d4ff; font-family: 'Share Tech Mono', monospace; font-size: 11px;
+        cursor: pointer; transition: all 0.2s; border-radius: 6px;
+        text-transform: uppercase; letter-spacing: 1px;
       ">DISMISS SIGNAL</button>
       <style>
-        @keyframes slideIn {
+        @keyframes dctSlideInAlert {
           from { transform: translateX(120%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
+        @keyframes dctFadeOutAlert {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(-20px); }
+        }
         #dct-close-alert:hover {
-          background: rgba(0,212,255,0.1);
+          background: rgba(0,212,255,0.15);
           border-color: #00d4ff;
-          box-shadow: 0 0 10px rgba(0,212,255,0.2);
+          box-shadow: 0 0 10px rgba(0,212,255,0.3);
         }
       </style>
     </div>
   `;
 
   document.body.appendChild(alertDiv);
+
+  // Auto fade out after 8 seconds
+  const autoDismissTimeout = setTimeout(() => {
+    const el = alertDiv.firstElementChild;
+    if (el) {
+      el.style.animation = 'dctFadeOutAlert 0.5s forwards';
+    }
+    setTimeout(() => alertDiv.remove(), 500);
+  }, 8000);
+
   document.getElementById('dct-close-alert').addEventListener('click', () => {
+    clearTimeout(autoDismissTimeout);
     alertDiv.remove();
+  });
+}
+
+function injectCongratsCard(data) {
+  // Prevent duplicate cards
+  if (document.getElementById('dct-congrats-card')) {
+    document.getElementById('dct-congrats-card').remove();
+  }
+
+  // Get current streak from storage to display
+  chrome.storage.local.get(['problemLog'], (result) => {
+    const log = result.problemLog || [];
+    
+    // Compute stats
+    const todayKey = () => new Date().toLocaleDateString('en-CA');
+    const getItemDay = (item) => new Date(item.timestamp).toLocaleDateString('en-CA');
+    
+    // Compute streak
+    const calcStreak = (logVal) => {
+      if (!logVal.length) return 0;
+      const daySet = new Set(logVal.map(p => getItemDay(p)));
+      const days = [...daySet].sort().reverse();
+      const today = todayKey();
+      
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const yesterday = d.toLocaleDateString('en-CA');
+
+      if (days[0] !== today && days[0] !== yesterday) return 0;
+      
+      let streak = 1;
+      for (let i = 1; i < days.length; i++) {
+        const diff = Math.round((new Date(days[i-1]) - new Date(days[i])) / 86400000);
+        if (diff === 1) streak++;
+        else break;
+      }
+      return streak;
+    };
+
+    const streak = calcStreak(log);
+    const timeTakenStr = (() => {
+      if (!data.openedAt || !data.timestamp) return '';
+      const diff = Math.abs(new Date(data.timestamp) - new Date(data.openedAt));
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      if (mins === 0) return `${secs}s`;
+      if (mins < 60)  return `${mins}m ${secs}s`;
+      return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    })();
+
+    const diffColors = {
+      Easy: '#00e5a0',
+      Medium: '#ffd060',
+      Hard: '#ff4060',
+      Expert: '#ff6bff',
+      'N/A': '#7da2c4'
+    };
+    const diffColor = diffColors[data.difficulty] || '#7da2c4';
+
+    const cardDiv = document.createElement('div');
+    cardDiv.id = 'dct-congrats-card';
+    cardDiv.innerHTML = `
+      <div style="
+        position: fixed; top: 20px; right: 20px; z-index: 999999;
+        background: #060a10; border: 2px solid #00ff88; border-radius: 12px;
+        padding: 24px; width: 360px;
+        box-shadow: 0 0 30px rgba(0,255,136,0.25);
+        font-family: 'Share Tech Mono', monospace; color: #c8dff0;
+        animation: dctSlideIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        background-image: 
+          linear-gradient(rgba(0,255,136,0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,255,136,0.02) 1px, transparent 1px);
+        background-size: 20px 20px;
+      ">
+        <div style="
+          position: absolute; top: -2px; left: 15%; right: 15%; height: 2px;
+          background: linear-gradient(90deg, transparent, #00ff88, transparent);
+        "></div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <span style="font-size: 24px; filter: drop-shadow(0 0 8px #00ff88);">🏆</span>
+          <span style="
+            font-family: 'Orbitron', sans-serif; font-weight: 900; 
+            color: #ffffff; letter-spacing: 2px; font-size: 16px;
+            text-shadow: 0 0 10px #00ff88;
+          ">CONGRATULATIONS!</span>
+        </div>
+
+        <div style="font-size: 13px; line-height: 1.5; margin-bottom: 16px;">
+          You successfully logged a solve on <span style="color: #00d4ff; font-weight: bold;">${data.platform.toUpperCase()}</span>:
+          <div style="
+            color: #ffffff; font-weight: bold; margin-top: 8px; font-size: 14px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          ">${data.name}</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+          <span style="
+            font-size: 10px; padding: 2px 8px; border-radius: 4px;
+            background: rgba(0,0,0,0.3); border: 1px solid ${diffColor};
+            color: ${diffColor}; text-transform: uppercase;
+          ">${data.difficulty}</span>
+
+          ${timeTakenStr ? `
+            <span style="font-size: 12px; color: #7da2c4;">
+              ⏱ ${timeTakenStr}
+            </span>
+          ` : ''}
+
+          ${streak > 0 ? `
+            <span style="font-size: 12px; color: #ff8c00; font-weight: bold; display: flex; align-items: center; gap: 2px;">
+              🔥 ${streak} day${streak > 1 ? 's' : ''}
+            </span>
+          ` : ''}
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button id="dct-close-congrats" style="
+            flex: 1; padding: 8px;
+            background: rgba(255,64,96,0.05); border: 1px solid rgba(255,64,96,0.2);
+            color: #ff4060; font-family: 'Share Tech Mono', monospace; font-size: 11px;
+            cursor: pointer; transition: all 0.2s; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: 1px;
+          ">Dismiss</button>
+          
+          <button id="dct-view-db-congrats" style="
+            flex: 1.5; padding: 8px;
+            background: rgba(0,255,136,0.1); border: 1px solid #00ff88;
+            color: #00ff88; font-family: 'Share Tech Mono', monospace; font-size: 11px;
+            cursor: pointer; transition: all 0.2s; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: 1px;
+            font-weight: bold;
+          ">View Database</button>
+        </div>
+
+        <style>
+          @keyframes dctSlideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes dctFadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+          }
+          #dct-close-congrats:hover {
+            background: rgba(255,64,96,0.15);
+            border-color: #ff4060;
+          }
+          #dct-view-db-congrats:hover {
+            background: #00ff88;
+            color: #060a10;
+            box-shadow: 0 0 15px rgba(0,255,136,0.4);
+          }
+        </style>
+      </div>
+    `;
+
+    document.body.appendChild(cardDiv);
+
+    // Auto dismiss after 10 seconds
+    const autoDismissTimeout = setTimeout(() => {
+      const el = cardDiv.firstElementChild;
+      if (el) {
+        el.style.animation = 'dctFadeOut 0.5s forwards';
+      }
+      setTimeout(() => cardDiv.remove(), 500);
+    }, 10000);
+
+    document.getElementById('dct-close-congrats').addEventListener('click', () => {
+      clearTimeout(autoDismissTimeout);
+      cardDiv.remove();
+    });
+
+    document.getElementById('dct-view-db-congrats').addEventListener('click', () => {
+      clearTimeout(autoDismissTimeout);
+      chrome.runtime.sendMessage({ action: 'open_db_viewer' });
+      cardDiv.remove();
+    });
   });
 }
 
@@ -528,12 +804,9 @@ async function handleMutation() {
       case 'leetcode':
         difficulty = getLeetCodeDifficulty();
         break;
-      case 'hackerrank': {
-        const live   = getHackerRankDifficulty();
-        const cached = await getHackerRankCachedDifficulty();
-        difficulty   = (live !== 'N/A') ? live : (cached || 'N/A');
+      case 'hackerrank':
+        difficulty = await getHackerRankDifficultyFromAPI(problemId);
         break;
-      }
       case 'codechef':
         difficulty = await getCodeChefDifficulty();
         break;

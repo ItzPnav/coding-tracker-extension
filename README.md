@@ -21,7 +21,7 @@ It uses:
 * **Manifest V3** — Modern extension standard ensuring high performance and security.
 * **MutationObserver** — High-performance DOM monitoring for zero-latency solve detection.
 * **Firebase Firestore** — Serverless document store that never pauses or sleeps, ensuring reliable syncing.
-* **Platform APIs** — Integration with Codeforces and CodeChef for accurate Elo ratings.
+* **Platform APIs** — Integration with Codeforces, CodeChef, and HackerRank REST APIs for accurate difficulty metadata.
 
 > Fully local-first architecture — your solve history is saved locally and synced to your private Firebase database.
 
@@ -146,7 +146,7 @@ Click the puzzle icon in the Chrome toolbar and pin DCT for quick status checks.
 # 🔒 **Security Notes**
 
 * All solve data is stored in your browser's local storage and synced securely to your private Firestore database.
-* Host permissions are narrowly scoped to Codeforces, CodeChef, Google Firebase, and Vercel Redirect APIs only.
+* Host permissions are narrowly scoped to Codeforces, CodeChef, HackerRank, Google Firebase, and Vercel Redirect APIs only.
 * Google Sign-In ensures your credentials remain secure and are authenticated directly with Google.
 
 ---

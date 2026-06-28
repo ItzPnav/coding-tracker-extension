@@ -379,6 +379,13 @@ async function checkAndClearLog() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── Load and Apply Theme ──────────────────────────────────────────────────
+  chrome.storage.local.get(['theme'], (result) => {
+    if (result.theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    }
+  });
+
   await checkAndClearLog();
 
   chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled'], (result) => {
@@ -391,6 +398,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       syncCloudData(result.user.id);
     }
   });
+
+  // ── Theme Switcher ─────────────────────────────────────────────────────────
+  const btnTheme = document.getElementById('btn-theme');
+  if (btnTheme) {
+    btnTheme.addEventListener('click', () => {
+      const isLight = document.documentElement.classList.toggle('light-theme');
+      chrome.storage.local.set({ theme: isLight ? 'light' : 'dark' });
+    });
+  }
 
   // ── Cloud Listeners ────────────────────────────────────────────────────────
   document.getElementById('btn-login').addEventListener('click', handleLogin);

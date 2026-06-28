@@ -24,6 +24,26 @@
       --dim:    #7da2c4;
       --mute:   #4a6880;
       --glow:   0 0 10px rgba(0,212,255,0.3);
+      --grid-color: rgba(0,212,255,0.025);
+    }
+
+    :root.light-theme {
+      --bg:     #f1f5f9;
+      --bg2:    #ffffff;
+      --bg3:    #f8fafc;
+      --border: #cbd5e1;
+      --border2:#94a3b8;
+      --neon:   #0284c7;
+      --green:  #10b981;
+      --red:    #ef4444;
+      --mid:    #f59e0b;
+      --easy:   #10b981;
+      --expert: #a855f7;
+      --text:   #0f172a;
+      --dim:    #475569;
+      --mute:   #94a3b8;
+      --glow:   0 0 10px rgba(2,132,199,0.25);
+      --grid-color: rgba(2,132,199,0.06);
     }
 
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -32,7 +52,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', sans-serif;
-      font-size: 13px;
+      font-size: 16px;
       min-height: 100vh;
     }
 
@@ -40,52 +60,63 @@
       content:'';
       position:fixed; inset:0;
       background-image:
-        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
-      background-size: 32px 32px;
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 36px 36px;
       pointer-events:none; z-index:0;
     }
 
-    .page { position:relative; z-index:1; max-width: 960px; margin:0 auto; padding: 24px 20px 40px; }
+    .page { position:relative; z-index:1; max-width: 1100px; margin:0 auto; padding: 30px 24px 50px; }
 
     /* ── HEADER ── */
     .header {
       display:flex; align-items:center; justify-content:space-between;
-      padding-bottom: 16px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 20px;
-      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 24px;
+      gap: 16px; flex-wrap: wrap;
     }
-    .header-left { display:flex; align-items:center; gap:14px; }
+    .header-left { display:flex; align-items:center; gap:16px; }
     .header-icon {
-      width: 38px; height: 38px;
+      width: 44px; height: 44px;
       filter: drop-shadow(0 0 8px rgba(0,212,255,0.5));
     }
     .header-title {
       font-family:'Orbitron', sans-serif;
-      font-weight:900; font-size:22px; letter-spacing:5px;
-      color:#fff;
+      font-weight:900; font-size:28px; letter-spacing:6px;
+      color: var(--text);
       text-shadow: 0 0 18px var(--neon);
     }
     .header-sub {
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:3px; color:var(--neon); opacity:0.85;
-      margin-top:3px;
+      font-size:11px; letter-spacing:3.5px; color:var(--neon); opacity:0.85;
+      margin-top:4px;
     }
     .header-back {
       font-family:'Share Tech Mono', monospace;
-      font-size:10px; letter-spacing:1px;
+      font-size:12px; letter-spacing:1px;
       color:var(--dim);
       background:none; border:1px solid var(--border);
-      border-radius:5px; padding:6px 12px;
+      border-radius:6px; padding:8px 16px;
       cursor:pointer; transition:all 0.2s;
     }
     .header-back:hover { color:var(--neon); border-color:var(--border2); box-shadow:var(--glow); }
 
+    .header-theme-toggle {
+      font-family:'Share Tech Mono', monospace;
+      font-size:12px; letter-spacing:1px;
+      color:var(--neon);
+      background:none; border:1px solid var(--border);
+      border-radius:6px; padding:8px 16px;
+      cursor:pointer; transition:all 0.2s;
+      margin-right: 8px;
+    }
+    .header-theme-toggle:hover { color:var(--neon); border-color:var(--border2); box-shadow:var(--glow); }
+
     /* ── STATS ROW ── */
     .stats-row {
       display:grid; grid-template-columns:repeat(4,1fr);
-      gap:8px; margin-bottom:20px;
+      gap:12px; margin-bottom:24px;
     }
     @media(max-width:600px){ .stats-row{ grid-template-columns:1fr 1fr; } }
 
@@ -93,35 +124,35 @@
       background:var(--bg2);
       border:1px solid var(--border);
       border-radius:8px;
-      padding:12px 10px;
+      padding:16px 14px;
       text-align:center;
     }
     .stat-num {
       font-family:'Orbitron', monospace;
-      font-size:24px; font-weight:700;
+      font-size:32px; font-weight:700;
       color:var(--neon);
       text-shadow:var(--glow);
       line-height:1;
     }
     .stat-lbl {
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:2px;
-      color:var(--dim); margin-top:5px; text-transform:uppercase;
+      font-size:11px; letter-spacing:2px;
+      color:var(--dim); margin-top:6px; text-transform:uppercase;
     }
 
     /* ── FILTERS ── */
     .filters-bar {
-      display:flex; gap:8px; flex-wrap:wrap;
-      margin-bottom:20px; align-items:center;
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-bottom:24px; align-items:center;
     }
     .filters-bar select,
     .filters-bar input {
       font-family:'Share Tech Mono', monospace;
-      font-size:11px; letter-spacing:1px;
-      padding:7px 10px;
+      font-size:14px; letter-spacing:1px;
+      padding:9px 12px;
       background:var(--bg2);
       border:1px solid var(--border);
-      border-radius:5px;
+      border-radius:6px;
       color:var(--text);
       cursor:pointer;
       transition: border-color 0.2s;
@@ -130,23 +161,23 @@
     .filters-bar input:hover { border-color:var(--border2); }
     .filters-bar select:focus,
     .filters-bar input:focus { outline:none; border-color:var(--neon); box-shadow:var(--glow); }
-    .filters-bar input { min-width:200px; }
+    .filters-bar input { min-width:240px; }
     .filter-count {
       font-family:'Share Tech Mono', monospace;
-      font-size:10px; letter-spacing:1px; color:var(--dim);
+      font-size:12px; letter-spacing:1px; color:var(--dim);
       margin-left:auto;
     }
 
     /* ── PLATFORM LEGEND ── */
     .platform-legend {
-      display:flex; gap:14px; flex-wrap:wrap;
+      display:flex; gap:16px; flex-wrap:wrap;
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:1px; color:var(--dim);
-      margin-bottom:20px; align-items:center;
+      font-size:11px; letter-spacing:1px; color:var(--dim);
+      margin-bottom:24px; align-items:center;
     }
     .leg-dot {
-      display:inline-block; width:8px; height:8px;
-      border-radius:50%; margin-right:5px;
+      display:inline-block; width:10px; height:10px;
+      border-radius:50%; margin-right:6px;
     }
 
     /* ── DAY BLOCK ── */
@@ -154,7 +185,7 @@
       background:var(--bg2);
       border:1px solid var(--border);
       border-radius:8px;
-      margin-bottom:10px;
+      margin-bottom:14px;
       overflow:hidden;
       transition:border-color 0.2s;
     }
@@ -162,31 +193,31 @@
 
     .day-header {
       display:flex; align-items:center; justify-content:space-between;
-      padding:11px 14px;
+      padding:14px 18px;
       cursor:pointer;
       user-select:none;
       transition:background 0.2s;
-      gap:10px;
+      gap:12px;
     }
     .day-header:hover { background:var(--bg3); }
 
     .day-date {
       font-family:'Orbitron', monospace;
-      font-size:12px; font-weight:700; letter-spacing:2px;
+      font-size:15px; font-weight:700; letter-spacing:2px;
       color:var(--neon);
     }
-    .day-meta { display:flex; align-items:center; gap:10px; }
+    .day-meta { display:flex; align-items:center; gap:12px; }
     .count-pill {
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:1.5px;
-      padding:3px 9px; border-radius:3px;
+      font-size:11px; letter-spacing:1.5px;
+      padding:4px 10px; border-radius:4px;
       background:rgba(0,212,255,0.1);
       color:var(--neon); border:1px solid rgba(0,212,255,0.2);
     }
-    .diff-pills { display:flex; gap:5px; }
+    .diff-pills { display:flex; gap:6px; }
     .mini-pill {
       font-family:'Share Tech Mono', monospace;
-      font-size:8px; padding:2px 6px; border-radius:3px; letter-spacing:0.5px;
+      font-size:10px; padding:3px 8px; border-radius:3px; letter-spacing:0.5px;
     }
     .mini-easy   { background:rgba(0,229,160,0.10); color:var(--easy);   border:1px solid rgba(0,229,160,0.2); }
     .mini-medium { background:rgba(255,208,96,0.10); color:var(--mid);   border:1px solid rgba(255,208,96,0.2); }
@@ -194,7 +225,7 @@
     .mini-expert { background:rgba(204,136,255,0.10);color:var(--expert);border:1px solid rgba(204,136,255,0.2);}
 
     .chevron {
-      font-size:11px; color:var(--dim);
+      font-size:13px; color:var(--dim);
       transition:transform 0.25s;
       flex-shrink:0;
     }
@@ -206,13 +237,13 @@
 
     table {
       width:100%; border-collapse:collapse;
-      font-size:11px;
+      font-size:13px;
     }
     thead th {
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:2px; text-transform:uppercase;
+      font-size:11px; letter-spacing:2px; text-transform:uppercase;
       color:var(--dim); font-weight:400;
-      padding:8px 12px;
+      padding:12px 16px;
       text-align:left;
       border-bottom:1px solid var(--border);
       white-space:nowrap;
@@ -220,18 +251,18 @@
     tbody tr { transition:background 0.15s; }
     tbody tr:hover td { background:var(--bg3); }
     tbody td {
-      padding:9px 12px;
+      padding:14px 16px;
       border-bottom:1px solid rgba(26,48,80,0.5);
       vertical-align:middle;
     }
     tbody tr:last-child td { border-bottom:none; }
 
-    .num-cell { color:var(--dim); font-family:'Share Tech Mono',monospace; width:32px; }
+    .num-cell { color:var(--dim); font-family:'Share Tech Mono',monospace; width:38px; }
 
     .prob-link {
       color:var(--green);
       text-decoration:none;
-      font-size:12px;
+      font-size:14px;
       text-shadow:0 0 6px rgba(0,255,136,0.2);
       transition:text-shadow 0.2s;
     }
@@ -241,17 +272,17 @@
     }
 
     .platform-cell {
-      display:flex; align-items:center; gap:6px;
+      display:flex; align-items:center; gap:8px;
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:1px; color:var(--dim);
+      font-size:11px; letter-spacing:1px; color:var(--dim);
       white-space:nowrap;
     }
-    .plat-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .plat-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 
     .diff-badge {
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:0.5px;
-      padding:2px 8px; border-radius:3px;
+      font-size:11px; letter-spacing:0.5px;
+      padding:4px 10px; border-radius:4px;
       text-transform:uppercase; white-space:nowrap;
     }
     .diff-easy   { background:rgba(0,229,160,0.12); color:var(--easy);   border:1px solid rgba(0,229,160,0.25); }
@@ -260,23 +291,83 @@
     .diff-expert { background:rgba(204,136,255,0.12);color:var(--expert);border:1px solid rgba(204,136,255,0.25);}
     .diff-na     { background:rgba(74,104,128,0.12); color:var(--dim);   border:1px solid rgba(74,104,128,0.2); }
 
-    .time-cell { color:var(--dim); font-family:'Share Tech Mono',monospace; font-size:10px; white-space:nowrap; }
-    .taken-cell { color:var(--neon); font-family:'Share Tech Mono',monospace; font-size:10px; opacity:0.95; white-space:nowrap; }
+    .time-cell { color:var(--dim); font-family:'Share Tech Mono',monospace; font-size:12px; white-space:nowrap; }
+    .taken-cell { color:var(--neon); font-family:'Share Tech Mono',monospace; font-size:12px; opacity:0.95; white-space:nowrap; }
+
+    /* ── ACTIONS MENU ── */
+    .action-cell {
+      position: relative;
+      text-align: right;
+      width: 60px;
+      vertical-align: middle;
+    }
+    .btn-action-trigger {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .btn-action-trigger:hover {
+      color: var(--neon);
+      background: rgba(0, 212, 255, 0.1);
+      box-shadow: var(--glow);
+    }
+    .action-menu-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .action-dropdown {
+      position: absolute;
+      right: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.25);
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .btn-delete-solve {
+      background: none;
+      border: none;
+      color: var(--red);
+      padding: 8px 14px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-delete-solve:hover {
+      background: rgba(255, 64, 96, 0.15);
+    }
+    .hidden {
+      display: none !important;
+    }
 
     /* ── EMPTY / ERROR ── */
     .empty {
-      text-align:center; padding:40px 20px;
+      text-align:center; padding:50px 24px;
       font-family:'Share Tech Mono', monospace;
-      font-size:11px; letter-spacing:2px; color:var(--dim);
+      font-size:13px; letter-spacing:2px; color:var(--dim);
     }
-    .empty-icon { font-size:36px; display:block; margin-bottom:14px; opacity:0.5; }
+    .empty-icon { font-size:44px; display:block; margin-bottom:18px; opacity:0.5; }
 
     /* ── FOOTER ── */
     .footer {
-      margin-top:30px; padding-top:14px;
+      margin-top:36px; padding-top:18px;
       border-top:1px solid var(--border);
       font-family:'Share Tech Mono', monospace;
-      font-size:9px; letter-spacing:2px; color:var(--mute);
+      font-size:11px; letter-spacing:2px; color:var(--mute);
       display:flex; justify-content:space-between;
     }
   </style>
@@ -299,7 +390,10 @@
         <div class="header-sub">PROBLEM DATABASE · ALL PLATFORMS</div>
       </div>
     </div>
-    <button class="header-back" id="btn-close">✕ CLOSE</button>
+    <div class="header-right" style="display:flex; gap:8px;">
+      <button class="header-theme-toggle" id="btn-theme">🌓 THEME</button>
+      <button class="header-back" id="btn-close">✕ CLOSE</button>
+    </div>
   </div>
 
   <!-- STATS -->

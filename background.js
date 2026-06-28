@@ -7,6 +7,12 @@ let authTabId = null;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
+  // Called from congrats card or elsewhere to open the database viewer
+  if (message.action === 'open_db_viewer') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('db-viewer.html') });
+    return;
+  }
+
   // Called from popup.js handleLogin() to open the OAuth tab
   if (message.action === 'start_auth') {
     chrome.tabs.create({ url: message.url }, (tab) => {

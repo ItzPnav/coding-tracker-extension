@@ -9,7 +9,8 @@
     "https://codeforces.com/api/*",
     "https://identitytoolkit.googleapis.com/*",
     "https://securetoken.googleapis.com/*",
-    "https://firestore.googleapis.com/*"
+    "https://firestore.googleapis.com/*",
+    "https://www.hackerrank.com/*"
   ],
   "icons": {
     "16": "icons/icon.png",

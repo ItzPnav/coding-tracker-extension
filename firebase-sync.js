@@ -177,6 +177,38 @@ const FirebaseSync = {
   },
 
   /**
+   * Delete a solve from Firebase Firestore
+   */
+  async deleteSolve(problemId, userId) {
+    if (!userId || FIREBASE_CONFIG.projectId === 'YOUR_FIREBASE_PROJECT_ID') return;
+
+    try {
+      const token = await this.getValidToken();
+      if (!token) {
+        console.warn('[DCT-Firebase] No valid firebase token for delete.');
+        return;
+      }
+
+      const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/users/${userId}/solves/${problemId}`;
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.warn('[DCT-Firebase] Delete failed:', err.error?.message || err);
+      } else {
+        console.log('[DCT-Firebase] Solve deleted successfully from cloud.');
+      }
+    } catch (e) {
+      console.error('[DCT-Firebase] Network error during delete:', e);
+    }
+  },
+
+  /**
    * Capture OAuth token from URL hash and exchange for Firebase token
    */
   captureLoginToken() {

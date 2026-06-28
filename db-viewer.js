@@ -189,6 +189,14 @@ function render() {
         </td>
         <td class="time-cell">${fmtTime(p.timestamp)}</td>
         <td class="taken-cell">⏱ ${fmtTimeTaken(p.openedAt, p.timestamp)}</td>
+        <td class="action-cell">
+          <div class="action-menu-container">
+            <button class="btn-action-trigger" data-id="${p.problemId}">⋮</button>
+            <div class="action-dropdown hidden" id="dropdown-${p.problemId}">
+              <button class="btn-delete-solve" data-id="${p.problemId}">🗑️ Delete</button>
+            </div>
+          </div>
+        </td>
       </tr>`).join('');
 
     return `
@@ -211,6 +219,7 @@ function render() {
                 <th>Platform</th>
                 <th>Solved At</th>
                 <th>Time Taken</th>
+                <th style="width: 50px; text-align: center;">Actions</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -279,11 +288,53 @@ async function init() {
   });
 }
 
+async function deleteSolveEntry(problemId) {
+  // Find in ALL_PROBLEMS and remove
+  const index = ALL_PROBLEMS.findIndex(p => p.problemId === problemId);
+  if (index === -1) return;
+
+  const [removed] = ALL_PROBLEMS.splice(index, 1);
+
+  // Update local storage
+  chrome.storage.local.set({ problemLog: ALL_PROBLEMS }, async () => {
+    console.log('[DCT] Deleted solve:', problemId);
+    
+    // Re-render immediately
+    render();
+
+    // Trigger Firebase sync delete if cloud sync enabled
+    chrome.storage.local.get(['isCloudEnabled', 'user'], async (result) => {
+      if (result.isCloudEnabled && result.user?.id) {
+        const titleEl = document.querySelector('.header-sub');
+        if (titleEl) titleEl.textContent = 'DELETING CLOUD RECORD...';
+        await FirebaseSync.deleteSolve(problemId, result.user.id);
+        if (titleEl) titleEl.textContent = 'CLOUD RECORD DELETED';
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // ── Load and Apply Theme ──────────────────────────────────────────────────
+  chrome.storage.local.get(['theme'], (result) => {
+    if (result.theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    }
+  });
+
   document.getElementById('filter-platform').addEventListener('change', render);
   document.getElementById('filter-diff').addEventListener('change', render);
   document.getElementById('filter-sort').addEventListener('change', render);
   document.getElementById('filter-search').addEventListener('input', render);
+
+  // Theme button
+  const btnTheme = document.getElementById('btn-theme');
+  if (btnTheme) {
+    btnTheme.addEventListener('click', () => {
+      const isLight = document.documentElement.classList.toggle('light-theme');
+      chrome.storage.local.set({ theme: isLight ? 'light' : 'dark' });
+    });
+  }
 
   // Close button
   const closeBtn = document.getElementById('btn-close');
@@ -291,13 +342,48 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.addEventListener('click', () => window.close());
   }
 
-  // Event delegation for day toggles
+  // Event delegation for day toggles and actions menu
   document.getElementById('db-container').addEventListener('click', (e) => {
+    // 1. Day toggles
     const header = e.target.closest('.day-header');
     if (header) {
       const day = header.getAttribute('data-day');
       if (day) toggleDay(day);
+      return;
     }
+
+    // 2. Action trigger toggles (3-dots)
+    const trigger = e.target.closest('.btn-action-trigger');
+    if (trigger) {
+      e.stopPropagation();
+      const problemId = trigger.getAttribute('data-id');
+      const dropdown = document.getElementById('dropdown-' + problemId);
+      
+      // Close all other dropdowns
+      document.querySelectorAll('.action-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.add('hidden');
+      });
+
+      if (dropdown) {
+        dropdown.classList.toggle('hidden');
+      }
+      return;
+    }
+
+    // 3. Delete solve button
+    const deleteBtn = e.target.closest('.btn-delete-solve');
+    if (deleteBtn) {
+      e.stopPropagation();
+      const problemId = deleteBtn.getAttribute('data-id');
+      if (confirm('Are you sure you want to delete this solve?')) {
+        deleteSolveEntry(problemId);
+      }
+    }
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.action-dropdown').forEach(d => d.classList.add('hidden'));
   });
 
   init();
