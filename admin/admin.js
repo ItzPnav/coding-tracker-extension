@@ -100,6 +100,70 @@ function escapeHTML(str) {
   );
 }
 
+const PLAT_COLOR = {
+  leetcode:   '#f5a623',
+  codeforces: '#4a90d9',
+  codechef:   '#9b6b3a',
+  hackerrank: '#00b388',
+};
+
+function getDiffColor(d) {
+  if (!d) return 'var(--text-dim)';
+  if (/easy/i.test(d)) return 'var(--easy)';
+  if (/medium/i.test(d)) return 'var(--mid)';
+  if (/hard/i.test(d)) return 'var(--hard)';
+  if (/expert/i.test(d)) return '#ff6bff';
+  return 'var(--text-dim)';
+}
+
+function parseTS(ts) {
+  if (!ts) return Date.now();
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? Date.now() : d.getTime();
+}
+
+function todayKey() {
+  return new Date().toLocaleDateString('en-CA');
+}
+
+function getItemDay(item) {
+  return new Date(parseTS(item.timestamp)).toLocaleDateString('en-CA');
+}
+
+function calcStreak(log) {
+  if (!log.length) return 0;
+  const daySet = new Set(log.map(p => getItemDay(p)));
+  const days   = [...daySet].sort().reverse();
+  
+  const today = todayKey();
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = d.toLocaleDateString('en-CA');
+
+  if (days[0] !== today && days[0] !== yesterday) return 0;
+  
+  let streak = 1;
+  for (let i = 1; i < days.length; i++) {
+    const diff = Math.round(
+      (new Date(days[i-1]) - new Date(days[i])) / 86400000
+    );
+    if (diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function calcAvg(log) {
+  if (!log.length) return '0.0';
+  const dayMap = {};
+  log.forEach(p => {
+    const k = getItemDay(p);
+    dayMap[k] = (dayMap[k] || 0) + 1;
+  });
+  const days = Object.keys(dayMap).length || 1;
+  return (log.length / days).toFixed(1);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Check if already authenticated in session storage
   const storedToken = sessionStorage.getItem('dct_admin_token');
@@ -322,14 +386,15 @@ async function loadDashboardData() {
       const uidFromPath = usersIndex !== -1 ? pathParts[usersIndex + 1] : 'unknown';
 
       ALL_SOLVES.push({
-        name: doc.name,
+        name: f.name?.stringValue || '',
         problemId: f.problemId?.stringValue || '',
         platform: f.platform?.stringValue || '',
         difficulty: f.difficulty?.stringValue || '',
         url: f.url?.stringValue || '',
         openedAt: f.openedAt?.stringValue || '',
         timestamp: f.timestamp?.stringValue || '',
-        userId: f.userId?.stringValue || uidFromPath
+        userId: f.userId?.stringValue || uidFromPath,
+        userEmail: f.userEmail?.stringValue || ''
       });
     });
 
@@ -428,22 +493,26 @@ function renderUsersDashboard() {
     const userSolves = userMap[uid];
     const totalSolved = userSolves.length;
     
+    // Find email from userSolves
+    const emailSolve = userSolves.find(s => s.userEmail);
+    const userDisplayName = emailSolve ? emailSolve.userEmail : uid;
+
     // Calculate unique active days
     const activeDays = new Set(userSolves.map(s => {
-      const d = new Date(s.timestamp);
+      const d = new Date(parseTS(s.timestamp));
       return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-CA');
     }).filter(Boolean));
     
     // Last Active
-    const lastActive = userSolves[0] ? new Date(userSolves[0].timestamp).toLocaleString() : 'N/A';
+    const lastActive = userSolves[0] ? new Date(parseTS(userSolves[0].timestamp)).toLocaleString() : 'N/A';
     
     const isExpanded = EXPANDED_USERS.has(uid);
-    const rowClass = 'expandable-row';
+    const rowClass = isExpanded ? 'expandable-row active-expanded' : 'expandable-row';
     
     rowsHtml += `
       <tr class="${rowClass}" onclick="toggleUserExpand('${uid}')">
         <td style="font-family:'Share Tech Mono', monospace; color: var(--text-mute);">${index + 1}</td>
-        <td style="font-family:'Share Tech Mono', monospace; font-weight:600; color:var(--neon);">${uid.substring(0, 12)}...</td>
+        <td style="font-family:'Share Tech Mono', monospace; font-weight:600; color:var(--neon);">${escapeHTML(userDisplayName)}</td>
         <td style="font-family:'Share Tech Mono', monospace;">${totalSolved} solved</td>
         <td style="font-family:'Share Tech Mono', monospace;">${activeDays.size} days</td>
         <td style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim);">${lastActive}</td>
@@ -451,11 +520,101 @@ function renderUsersDashboard() {
     `;
     
     if (isExpanded) {
+      // Calculate Stats Combination (Dashboard + History)
+      const dailyAvg = calcAvg(userSolves);
+      const streak = calcStreak(userSolves);
+      
+      const platCounts = { leetcode: 0, codeforces: 0, codechef: 0, hackerrank: 0 };
+      userSolves.forEach(s => {
+        if (platCounts[s.platform] !== undefined) platCounts[s.platform]++;
+      });
+      
+      const diffCounts = { Easy: 0, Medium: 0, Hard: 0, Expert: 0, 'N/A': 0 };
+      userSolves.forEach(s => {
+        const d = s.difficulty || 'N/A';
+        if (diffCounts[d] !== undefined) diffCounts[d]++;
+      });
+
       rowsHtml += `
         <tr class="expanded-row-details">
           <td colspan="5">
-            <div class="expanded-container">
-              <h4 style="margin-bottom: 12px; font-family:'Orbitron', sans-serif; font-size:12px; color:var(--neon);">SOLVES HISTORY FOR ${uid}</h4>
+            <div class="expanded-container" style="background:var(--bg); border:1px solid var(--border); padding:20px; border-radius:8px; text-align:left; margin: 10px 0;">
+              <!-- Profile Header -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                <h4 style="font-family:'Orbitron', sans-serif; font-size:13px; color:var(--neon); margin:0;">USER METRICS: ${escapeHTML(userDisplayName)}</h4>
+                <span style="font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-mute);">UID: ${uid}</span>
+              </div>
+
+              <!-- Stats Cards Row (Mini-Dashboard) -->
+              <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:6px; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim);">TOTAL SOLVED</div>
+                  <div style="font-family:'Orbitron', sans-serif; font-size:18px; color:var(--neon); text-shadow:var(--glow); margin-top:4px;">${totalSolved}</div>
+                </div>
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:6px; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim);">DAILY AVERAGE</div>
+                  <div style="font-family:'Orbitron', sans-serif; font-size:18px; color:var(--green); margin-top:4px;">${dailyAvg}</div>
+                </div>
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:6px; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim);">ACTIVE STREAK</div>
+                  <div style="font-family:'Orbitron', sans-serif; font-size:18px; color:var(--orange); margin-top:4px;">${streak} 🔥</div>
+                </div>
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:6px; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim);">ACTIVE DAYS</div>
+                  <div style="font-family:'Orbitron', sans-serif; font-size:18px; color:var(--easy); margin-top:4px;">${activeDays.size}</div>
+                </div>
+              </div>
+
+              <!-- Platforms & Difficulty Distribution Bars -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                <!-- Platform Breakdown -->
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:14px; border-radius:6px;">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">PLATFORM BREAKDOWN</div>
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${Object.keys(platCounts).map(plat => {
+                      const count = platCounts[plat];
+                      const pct = totalSolved ? Math.round((count / totalSolved) * 100) : 0;
+                      return `
+                        <div>
+                          <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Share Tech Mono', monospace;">
+                            <span>${PLAT_ICON[plat] || '❓'} ${plat.toUpperCase()}</span>
+                            <span style="color:var(--text);">${count} (${pct}%)</span>
+                          </div>
+                          <div style="height:4px; background:var(--bg3); border-radius:2px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:${PLAT_COLOR[plat] || '#888'};"></div>
+                          </div>
+                        </div>
+                      `;
+                    }).filter(Boolean).join('')}
+                  </div>
+                </div>
+
+                <!-- Difficulty Breakdown -->
+                <div style="background:var(--bg2); border:1px solid var(--border); padding:14px; border-radius:6px;">
+                  <div style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">DIFFICULTY BREAKDOWN</div>
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${Object.keys(diffCounts).map(diff => {
+                      const count = diffCounts[diff];
+                      const pct = totalSolved ? Math.round((count / totalSolved) * 100) : 0;
+                      if (!count && diff === 'N/A') return ''; // Skip empty N/A
+                      return `
+                        <div>
+                          <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Share Tech Mono', monospace;">
+                            <span class="badge ${getDiffClass(diff)}" style="margin-right:0; padding: 1px 6px;">${diff}</span>
+                            <span style="color:var(--text);">${count} (${pct}%)</span>
+                          </div>
+                          <div style="height:4px; background:var(--bg3); border-radius:2px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:${getDiffColor(diff)};"></div>
+                          </div>
+                        </div>
+                      `;
+                    }).filter(Boolean).join('')}
+                  </div>
+                </div>
+              </div>
+
+              <!-- History Accordion -->
+              <div style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">SOLVE HISTORY LIST</div>
               ${renderUserSolvesAccordion(userSolves)}
             </div>
           </td>

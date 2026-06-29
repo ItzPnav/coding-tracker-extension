@@ -83,7 +83,7 @@ const FirebaseSync = {
   /**
    * Push a solve to Firebase Firestore
    */
-  async pushSolve(data, userId) {
+  async pushSolve(data, userId, userEmail = '') {
     if (!userId || FIREBASE_CONFIG.projectId === 'YOUR_FIREBASE_PROJECT_ID') return;
 
     try {
@@ -103,7 +103,8 @@ const FirebaseSync = {
           url:        { stringValue: data.url || '' },
           openedAt:   { stringValue: data.openedAt || '' },
           timestamp:  { stringValue: data.timestamp || '' },
-          userId:     { stringValue: userId || '' }
+          userId:     { stringValue: userId || '' },
+          userEmail:  { stringValue: userEmail || '' }
         }
       };
 

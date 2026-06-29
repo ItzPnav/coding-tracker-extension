@@ -641,22 +641,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = res.user;
         const isCloudEnabled = res.isCloudEnabled;
         const userId = user?.id || 'gyVjCcPntNd9ijrslECh0x1aUjx2';
+        const userEmail = user?.email || 'katakam.sripranav@gmail.com';
         
         if (!isCloudEnabled || !user || !user.id) {
           showCustomConfirm(
             'DEMO DATA',
             'You are not connected to Firebase Cloud Sync. Generating demo data will only save it locally. Do you want to proceed?',
             false,
-            () => startDemoGeneration(false, userId)
+            () => startDemoGeneration(false, userId, userEmail)
           );
         } else {
-          startDemoGeneration(true, userId);
+          startDemoGeneration(true, userId, userEmail);
         }
       });
     });
   }
 
-  async function startDemoGeneration(syncToCloud, userId) {
+  async function startDemoGeneration(syncToCloud, userId, userEmail) {
     // Show progress overlay
     const progressOverlay = document.getElementById('demo-progress-overlay');
     const progressBar = document.getElementById('demo-progress-bar');
@@ -770,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const batch = solves.slice(i, i + batchSize);
         try {
           await Promise.all(batch.map(async (solve) => {
-            await FirebaseSync.pushSolve(solve, userId);
+            await FirebaseSync.pushSolve(solve, userId, userEmail);
           }));
         } catch (err) {
           console.error('[DCT] Firestore batch push failed:', err);
