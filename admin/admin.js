@@ -87,6 +87,19 @@ function showCustomAlert(title, message, isSuccess) {
   modal.style.display = 'flex';
 }
 
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Check if already authenticated in session storage
   const storedToken = sessionStorage.getItem('dct_admin_token');
@@ -494,7 +507,7 @@ function renderUserSolvesAccordion(solves) {
     const rows = dayProbs.map((p, i) => `
       <tr>
         <td style="color:var(--text-mute); font-family:'Share Tech Mono', monospace; width:30px;">${i + 1}</td>
-        <td><a href="${p.url}" target="_blank" style="color:var(--green); text-decoration:none;">${p.name || p.problemId}</a></td>
+        <td><a href="${escapeHTML(p.url)}" target="_blank" style="color:var(--green); text-decoration:none;">${escapeHTML(p.name || p.problemId)}</a></td>
         <td><span class="badge ${getDiffClass(p.difficulty)}">${p.difficulty || 'N/A'}</span></td>
         <td>
           <span style="font-family:'Share Tech Mono', monospace; font-size:10px;">
@@ -606,11 +619,11 @@ function renderErrorLogs() {
           ${new Date(e.timestamp).toLocaleString()}
         </td>
         <td>
-          <span class="err-source ${srcClass}">${e.source}</span>
+          <span class="err-source ${srcClass}">${escapeHTML(e.source)}</span>
         </td>
-        <td style="color:var(--red); font-weight:500;">${e.message}</td>
+        <td style="color:var(--red); font-weight:500;">${escapeHTML(e.message)}</td>
         <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-dim);">
-          <a href="${e.url}" target="_blank" style="color:var(--text-dim); text-decoration:none;">${e.url}</a>
+          <a href="${escapeHTML(e.url)}" target="_blank" style="color:var(--text-dim); text-decoration:none;">${escapeHTML(e.url)}</a>
         </td>
         <td style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-mute);">
           ${e.userId.substring(0, 12)}...

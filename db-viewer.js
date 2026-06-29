@@ -18,6 +18,19 @@ const PLAT_LABEL = {
 };
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
 function parseTS(ts) {
   if (!ts) return Date.now();
   const d = new Date(ts);
@@ -261,7 +274,7 @@ function render() {
       <tr>
         <td class="num-cell">${i + 1}</td>
         <td>
-          <a class="prob-link" href="${p.url}" target="_blank">${p.name}</a>
+          <a class="prob-link" href="${escapeHTML(p.url)}" target="_blank">${escapeHTML(p.name)}</a>
         </td>
         <td>
           <span class="diff-badge ${diffClass(p.difficulty)}">${p.difficulty || 'N/A'}</span>
@@ -1071,7 +1084,7 @@ function renderAnalytics(problems) {
           <div class="recent-plat-icon" style="background:${platColor}18;border:1px solid ${platColor}28;">
             <span style="color:${platColor}">${(p.platform||'?')[0].toUpperCase()}</span>
           </div>
-          <span class="recent-name">${p.name||p.problemId||'?'}</span>
+          <span class="recent-name">${escapeHTML(p.name||p.problemId||'?')}</span>
           ${p.difficulty ? `<span class="recent-diff" style="background:${diffBg};color:${diffColor};border:1px solid ${diffBorder}">${p.difficulty}</span>` : ''}
           <span class="recent-plat-lbl">${PLAT_LABEL[p.platform]||p.platform||'?'}</span>
           <span class="recent-time">${timeStr} ago</span>
@@ -1245,7 +1258,7 @@ function renderDifficultyHistory(problems) {
   container.innerHTML = recent.map(p => {
     return `
       <div class="diff-history-item">
-        <a class="prob-link diff-history-title" href="${p.url}" target="_blank">${p.name}</a>
+        <a class="prob-link diff-history-title" href="${escapeHTML(p.url)}" target="_blank">${escapeHTML(p.name)}</a>
         <div style="display:flex; align-items:center; gap:12px;">
           <span class="diff-badge ${diffClass(p.difficulty)}">${p.difficulty || 'N/A'}</span>
           <span style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--dim);">${new Date(parseTS(p.timestamp)).toLocaleDateString()}</span>

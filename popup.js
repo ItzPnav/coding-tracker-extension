@@ -171,9 +171,10 @@ function renderList(log) {
     const timeTaken = formatTimeTaken(item.openedAt, item.timestamp);
     const div = document.createElement('div');
     div.className = 'problem-item';
+    const escapedName = escapeHTML(item.name);
     div.innerHTML = `
-      <div class="problem-name" title="${item.name}">
-        ${platformIcon(item.platform)} ${item.name}
+      <div class="problem-name" title="${escapedName}">
+        ${platformIcon(item.platform)} ${escapedName}
       </div>
       <div class="problem-meta">
         <span class="badge ${diffClass(item.difficulty)}">${item.difficulty || 'N/A'}</span>
@@ -505,4 +506,17 @@ function showPopupAlert(title, message, isSuccess, onOk) {
   });
   
   modal.style.display = 'flex';
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
