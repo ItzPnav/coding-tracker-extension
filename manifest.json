@@ -48,7 +48,7 @@
         "https://*.web.app/*",
         "https://success-page-for-dct.vercel.app/*"
       ],
-      "js": ["firebase-sync.js", "content.js"]
+      "js": ["utils/logger.js", "firebase-sync.js", "content.js"]
     }
   ]
 }

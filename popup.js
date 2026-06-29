@@ -153,7 +153,9 @@ function renderList(log) {
   const list = document.getElementById('problem-list');
   list.innerHTML = '';
 
-  if (!log.length) {
+  const todayItems = log.filter(p => getItemDay(p) === todayKey());
+
+  if (!todayItems.length) {
     list.innerHTML = `
       <div class="empty-state">
         <span class="empty-icon">📡</span>
@@ -162,7 +164,10 @@ function renderList(log) {
     return;
   }
 
-  [...log].reverse().forEach((item) => {
+  // Sort today's items to show the newest at the top
+  const sortedToday = [...todayItems].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  sortedToday.forEach((item) => {
     const timeTaken = formatTimeTaken(item.openedAt, item.timestamp);
     const div = document.createElement('div');
     div.className = 'problem-item';
@@ -312,7 +317,7 @@ async function fetchUserInfo(token) {
     });
     return await res.json();
   } catch (e) {
-    console.error('[DCT] Failed to fetch user info:', e);
+    logError('popup.js', 'Failed to fetch user info', { error: e.message });
     return null;
   }
 }
@@ -320,7 +325,7 @@ async function fetchUserInfo(token) {
 async function handleLogin() {
   try {
     if (FIREBASE_CONFIG.googleClientId === 'YOUR_GOOGLE_CLIENT_ID' || FIREBASE_CONFIG.projectId === 'YOUR_FIREBASE_PROJECT_ID') {
-      alert('Please configure your Firebase credentials in firebase-sync.js first!');
+      showPopupAlert('CONFIGURATION ERROR', 'Please configure your Firebase credentials in firebase-sync.js first!', false);
       return;
     }
 
@@ -336,16 +341,20 @@ async function handleLogin() {
     chrome.runtime.sendMessage({ action: 'start_auth', url: authUrl });
 
   } catch (e) {
-    console.error('[DCT] Login failed:', e);
-    alert('Login failed: ' + (e.message || 'Check your configuration'));
+    logError('popup.js', 'Login failed', { error: e.message });
+    showPopupAlert('LOGIN FAILED', 'Login failed: ' + (e.message || 'Check your configuration'), false);
   }
 }
 
 function handleLogout() {
   // Clear local session and Firebase tokens
   chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at'], () => {
-    updateAuthUI(null);
-    console.log('[DCT] Signed out (local session cleared).');
+    chrome.storage.local.set({ problemLog: [] }, () => {
+      updateAuthUI(null);
+      renderStats([]);
+      renderList([]);
+      console.log('[DCT] Signed out (local session cleared, local log wiped).');
+    });
   });
 }
 
@@ -416,7 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-log').addEventListener('click', () => {
     chrome.storage.local.get(['problemLog'], (result) => {
       const log = result.problemLog || [];
-      if (!log.length) return alert('No problems logged yet!');
+      if (!log.length) return showPopupAlert('NO DATA', 'No problems logged yet!', false);
       downloadTxt(buildDetailedTxt(log), 'dct_detailed_log.txt');
     });
   });
@@ -431,7 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.local.get(['problemLog'], (result) => {
       const log    = result.problemLog || [];
       const today  = log.filter(p => getItemDay(p) === todayKey());
-      if (!today.length) return alert('No problems solved today!');
+      if (!today.length) return showPopupAlert('NO SOLVES', 'No problems solved today!', false);
 
       const now = new Date();
       let msg = `**DCT — Solved Today (${formatDate(now)})**\n`;
@@ -442,13 +451,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       navigator.clipboard.writeText(msg)
         .then(() => {
-          alert('✅ Message copied to clipboard!\n\nPaste it in your Discord DM.\n(Opening Discord...)');
+          showPopupAlert(
+            'COPIED TO CLIPBOARD', 
+            '✅ Solved URLs copied successfully!\n\nPaste them directly in your Discord DM.\n(Opening Discord...)', 
+            true, 
+            () => {
+              window.open('https://discord.com/channels/@me', '_blank');
+            }
+          );
         })
         .catch(() => {
-          alert('Opening Discord — paste your URLs there:\n\n' + msg);
-        })
-        .finally(() => {
-          window.open('https://discord.com/channels/@me', '_blank');
+          showPopupAlert(
+            'OPENING DISCORD', 
+            'Paste your solved URLs in Discord:\n\n' + msg, 
+            false, 
+            () => {
+              window.open('https://discord.com/channels/@me', '_blank');
+            }
+          );
         });
     });
   });
@@ -459,3 +479,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('about-arrow').classList.toggle('open');
   });
 });
+
+function showPopupAlert(title, message, isSuccess, onOk) {
+  const modal = document.getElementById('custom-alert');
+  const iconEl = document.getElementById('custom-alert-icon');
+  const titleEl = document.getElementById('custom-alert-title');
+  const messageEl = document.getElementById('custom-alert-message');
+  const okBtn = document.getElementById('custom-alert-btn');
+  
+  if (!modal) return;
+  
+  iconEl.textContent = isSuccess ? '🏆' : '⚠️';
+  titleEl.textContent = title;
+  titleEl.style.color = isSuccess ? 'var(--green)' : 'var(--red)';
+  titleEl.style.textShadow = isSuccess ? '0 0 10px rgba(0,255,136,0.3)' : '0 0 10px rgba(255,64,96,0.3)';
+  messageEl.textContent = message;
+  
+  // Clone button to remove previous listeners
+  const newOkBtn = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+  
+  newOkBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+    if (onOk) onOk();
+  });
+  
+  modal.style.display = 'flex';
+}

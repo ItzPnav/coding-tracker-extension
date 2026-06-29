@@ -1,11 +1,11 @@
 # 🏆 **Daily Coding Tracker Pro (DCT)**
 
-### *Automatic solve detection and difficulty tracking for major competitive programming platforms worldwide.*
+### *Automatic solve detection, difficulty tracking, and cloud sync console for major competitive programming platforms.*
 
 <div align="center">
 <img src="https://img.shields.io/badge/Manifest-V3-00d4ff?style=for-the-badge">
 <img src="https://img.shields.io/badge/Logic-JavaScript-f7df1e?style=for-the-badge">
-<img src="https://img.shields.io/badge/UI-Neon_CSS-00ff88?style=for-the-badge">
+<img src="https://img.shields.io/badge/UI-Anthropic_Sans-0af?style=for-the-badge">
 <img src="https://img.shields.io/badge/Database-Firebase_Firestore-FFCA28?style=for-the-badge">
 <img src="https://img.shields.io/badge/Storage-Local-ff8c00?style=for-the-badge">
 </div>
@@ -14,16 +14,9 @@
 
 # 📌 **Overview**
 
-**Daily Coding Tracker Pro (DCT)** is a modern Chrome Extension designed for competitive programmers to log every successful solve without manual input.
+**Daily Coding Tracker Pro (DCT)** is a local-first Chrome Extension designed for competitive programmers to log every successful solve automatically. It detects solves in real-time across LeetCode, HackerRank, CodeChef, and Codeforces, computing active streaks and displaying detailed history metrics.
 
-It uses:
-
-* **Manifest V3** — Modern extension standard ensuring high performance and security.
-* **MutationObserver** — High-performance DOM monitoring for zero-latency solve detection.
-* **Firebase Firestore** — Serverless document store that never pauses or sleeps, ensuring reliable syncing.
-* **Platform APIs** — Integration with Codeforces, CodeChef, and HackerRank REST APIs for accurate difficulty metadata.
-
-> Fully local-first architecture — your solve history is saved locally and synced to your private Firebase database.
+Features include a persistent tab-based Database Viewer dashboard, a centralized error logging engine for easy debugging, and an external secure Admin Dashboard to monitor user statistics and solve histories via Firestore REST APIs.
 
 ---
 
@@ -31,31 +24,41 @@ It uses:
 
 ```
 [ User Solves Problem on Platform (LeetCode/CF/CC/HR) ]
-              ↓
+                      ↓
 [ MutationObserver Scans DOM for 'Accepted' Status ]
-              ↓
-┌──────────────────────────────────────────────┐
-│        DCT CONTENT SCRIPT (content.js)       │
-│  1. Identify Platform & Extract Problem ID   │
-│  2. Fetch Difficulty (DOM or Platform API)   │
-│  3. Deduplicate & Save to chrome.storage     │
-└──────────────────────────────────────────────┘
-              ↓
-[ Persistent Storage (problemLog array) ]
-              ↓
-┌──────────────────────────────────────────────┐
-│        DASHBOARD UI (popup.js / HTML)        │
-│  1. Compute Streaks & Daily Averages         │
-│  2. Render Neon UI & Difficulty Badges       │
-│  3. Provide Export & DB Viewer Access        │
-└──────────────────────────────────────────────┘
-              ↓
-┌──────────────────────────────────────────────┐
-│      CLOUD SYNC ENGINE (firebase-sync.js)    │
-│  1. Secure Firebase Auth via Google Login    │
-│  2. Redirects and captures tokens on Vercel   │
-│  3. Automatically Syncs Solves to Firestore   │
-└──────────────────────────────────────────────┘
+                      ↓
+┌────────────────────────────────────────────────────────┐
+│             DCT CONTENT SCRIPT (content.js)            │
+│  - Detects solve, extracts Problem ID & platform       │
+│  - Fetches rating / difficulty tier via Platform APIs  │
+│  - Logs errors locally & triggers background updates   │
+└────────────────────────────────────────────────────────┘
+                      ↓
+  ┌────────────────────────────────────────────────────┐
+  │         PERSISTENT STORAGE (chrome.storage)        │
+  │  - local problemLog array & cfProblemMap cache     │
+  │  - rolling local errorLog (200 entries cap)        │
+  └────────────────────────────────────────────────────┘
+          ↙                                    ↘
+┌──────────────────────────────────┐  ┌──────────────────────────────────┐
+│      POPUP UI (popup.js/html)    │  │   DB VIEWER (db-viewer.js/html)  │
+│  - Instant stats & active streak │  │  - Bottom tab-based navigation   │
+│  - 7D recent solves overview     │  │  - Heatmap & 24h TOD charts      │
+│  - Direct link to DB Viewer page │  │  - Settings & Cloud manual sync  │
+└──────────────────────────────────┘  └──────────────────────────────────┘
+                      ↘                        ↙
+┌────────────────────────────────────────────────────────┐
+│          CLOUD SYNC ENGINE (firebase-sync.js)          │
+│  - Secure token refresh, syncs solves and system logs  │
+│  - Vercel OAuth capture, uploads to Firestore REST     │
+└────────────────────────────────────────────────────────┘
+                      ↓
+┌────────────────────────────────────────────────────────┐
+│         ADMIN CONSOLE (admin/admin.html & js)          │
+│  - Independent secure Email/Password REST login        │
+│  - Profile aggregation & user solves accordion history  │
+│  - Obsolescence filters and error database pruning     │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -63,19 +66,28 @@ It uses:
 # 🚀 **Features**
 
 ### 🏆 Automatic Detection
-Instantly detects successful solves on LeetCode, HackerRank, CodeChef, and Codeforces without requiring any manual logging or user interaction.
+Instantly detects solves on LeetCode, HackerRank, CodeChef, and Codeforces without requiring manual logging.
 
-### 📊 Live Statistics
-Calculates real-time metrics including daily solve streaks, overall averages, and difficulty distribution directly within the neon-themed popup dashboard.
+### 📊 Persistent Tabbed Dashboard
+A top-navigation dashboard in the DB Viewer separating the interface into Dashboard, History, Analytics, Cloud, and Settings.
 
-### 🔍 Deep Difficulty Mapping
-Seamlessly integrates with official platform APIs to fetch precise Elo ratings and difficulty tiers, ensuring your solve history is accurately categorized.
+### 📈 Extended Analytics
+Visualizes progress with a 12-week GitHub-style activity heatmap, a vertically responsive 24-hour time-of-day distribution chart, and recent difficulty history.
 
-### ☁️ Serverless Cloud Sync
-Synchronizes your solve history to Firebase Firestore. Since Firestore is fully serverless, the cloud database never pauses or sleeps due to inactivity.
+### 🎨 Themed Custom Dialogs
+Completely replaces native browser prompts with modern, responsive, center-aligned custom confirmation and alert modals.
 
-### 📂 Local-First Database
-Keeps your entire solve history private on your machine using local storage, featuring detailed export options to TXT for backup or analysis.
+### 🔒 User-Wise Storage Isolation
+Wipes local storage problem logs automatically on logout or disconnection to prevent data bleed between user accounts.
+
+### 🎛️ Standalone Admin Console
+Allows administrators to verify credentials against a database whitelist, log in securely, view active user profiles, expand solve histories, and audit system error logs.
+
+### 🛡️ Error Logger Utility
+A centralized debugging utility that records errors in a rolling 200-entry local buffer and automatically syncs them to Firestore.
+
+### ☁️ Zero-Pause Cloud Sync
+Synchronizes history and error events to Firebase Firestore REST API using lightweight Google OAuth tokens.
 
 ---
 
@@ -85,69 +97,66 @@ Keeps your entire solve history private on your machine using local storage, fea
 |-------|------------|
 | Manifest | Version 3 |
 | Logic | ES2020 JavaScript |
-| Styling | Vanilla CSS (Neon Design) |
+| Fonts | Anthropic Sans (Local Display/Text OTF Mappings) |
+| Styling | Vanilla CSS (Dark Neon Theme) |
 | Database | Firebase Firestore (REST API) |
-| Auth | Firebase Auth (Google Provider) |
-| Storage | chrome.storage.local |
-| Observability | MutationObserver API |
+| Auth | Firebase Auth (Google Provider & Email/Password REST) |
+| Storage | chrome.storage.local (solves, caches, errorLog) |
+| Observability | MutationObserver API & Central Logger |
 
 ---
 
 # 📦 **Setup**
 
 1. **Clone the repository:**
-
 ```bash
 git clone https://github.com/pnav/coding-tracker-extension.git
 cd coding-tracker-extension
 ```
 
-2. **Configure Credentials:**
-Open `firebase-sync.js` and enter your Firebase `apiKey`, `projectId`, and `googleClientId`. Make sure `redirectUrl` is set to `https://success-page-for-dct.vercel.app/`.
+2. **Configure Extension Credentials:**
+Open `firebase-sync.js` and input your Firebase `apiKey`, `projectId`, and `googleClientId`. Verify that `redirectUrl` is set to your OAuth handler page.
 
 3. **Configure Redirect URIs in Google Cloud:**
-In the Google Cloud Credentials console, edit your OAuth Client ID and add `https://success-page-for-dct.vercel.app/` as an **Authorized redirect URI**.
+In the Google Cloud Console, add your OAuth redirect URL (e.g., `https://success-page-for-dct.vercel.app/`) as an **Authorized redirect URI**.
 
 4. **Whitelist Client ID in Firebase:**
-In the Firebase Authentication Console, edit the Google provider settings. Expand **Safelist client IDs from external projects (optional)** and add your Google Client ID there.
+In your Firebase Console under Authentication, add your Google Client ID to the safelist of external projects.
 
-5. **Open Chrome Extensions:**
-Navigate to `chrome://extensions/` in your browser.
+5. **Create Admin User:**
+In your Firebase Console, enable the Email/Password Auth Provider and create an admin user credential.
 
-6. **Enable Developer Mode:**
-Toggle the "Developer mode" switch in the top-right corner of the page.
-
-7. **Load the Extension:**
-Click "Load unpacked" and select the `coding-tracker-extension` root folder.
-
-8. **Pin for Easy Access:**
-Click the puzzle icon in the Chrome toolbar and pin DCT for quick status checks.
+6. **Load Extension in Chrome:**
+Go to `chrome://extensions/`, enable "Developer mode", click "Load unpacked", and select the `coding-tracker-extension` directory.
 
 ---
 
 # 🛡️ **Production Tips**
 
-* Use the "Export Detailed Log" feature weekly to maintain a permanent record of your progress.
-* Keep the extension pinned to monitor your current daily streak at a glance.
-* For HackerRank, browse problem lists first to pre-cache difficulty data for faster logging.
+* Pin the extension popover to track your solve streak status in real-time.
+* Open the DB Viewer using the settings menu to access advanced charts and export tools.
+* Check the Admin Console regularly to audit system error logs and monitor solver volumes.
+* Pre-cache HackerRank difficulties by browsing platform dashboards before starting a challenge.
 
 ---
 
 # 💡 **Roadmap**
 
-* [x] **Firebase Integration**: Transition to cloud storage for seamless, zero-pause cross-browser history syncing.
-* [x] **User Authentication**: Secure login system to preserve solve history across device changes.
-* [ ] **Discord Integration**: Automated "Solved!" notifications to personal Discord channels via Webhooks.
-* [ ] **Native Notifications**: Browser-level toast notifications upon successful problem logging.
-* [ ] **Custom Tagging**: Ability to manually tag problems (e.g., #DP, #Graph) directly in the UI.
+* [x] **Streak Tracking**: Visual flame indicator in the popover and dashboard interfaces.
+* [x] **Charts & Graphs**: 12-week heatmap, 24-hour time-of-day, and platform distribution charts.
+* [x] **Firebase Integration**: Serverless cloud syncing to prevent inactivity pauses.
+* [x] **User Authentication**: Google Auth for solvers and Email/Password REST Auth for admins.
+* [ ] **Discord Bot Integration**: Automated solves broadcast to specified Discord channels via Webhooks.
+* [ ] **Native Notifications**: Browser toast alerts triggering upon successful solve logs.
+* [ ] **Custom Tags**: Ability to assign tags (e.g., #DP, #Graph) to solves in the history database.
 
 ---
 
 # 🔒 **Security Notes**
 
-* All solve data is stored in your browser's local storage and synced securely to your private Firestore database.
-* Host permissions are narrowly scoped to Codeforces, CodeChef, HackerRank, Google Firebase, and Vercel Redirect APIs only.
-* Google Sign-In ensures your credentials remain secure and are authenticated directly with Google.
+* Solves and system logs are stored locally and synced securely to your private Firestore.
+* Admin panel queries Firestore collections securely using credentialed REST auth payloads.
+* Extension host permissions are strictly scoped to supported platform domains and Firebase.
 
 ---
 
@@ -155,18 +164,32 @@ Click the puzzle icon in the Chrome toolbar and pin DCT for quick status checks.
 
 ```
 coding-tracker-extension/
-│
-├── MD files/          # Project guidelines, roadmap, and progress logs
-├── docs/              # Research notes and platform-specific API docs
-├── background.js      # Service worker for OAuth and tab management
-├── content.js         # Core solve detection and scraping logic
-├── firebase-sync.js   # Lightweight Firebase REST client and login handler
-├── popup.js           # Dashboard logic, stats calculation, and rendering
-├── popup.html         # Main extension popup interface
-├── db-viewer.js       # Standalone database viewer logic
-├── db-viewer.html     # Full-page database management interface
-├── manifest.json      # Extension configuration and permissions
-└── README.md          # Project documentation (regenerated)
+├── admin/
+│   ├── admin.html       # Standalone admin dashboard interface
+│   └── admin.js         # Admin dashboard operations and REST query logic
+├── docs/
+│   ├── Anthropic Sans-fontiko/ # Local Anthropic Sans font assets
+│   ├── anthropicSerif/        # Local Anthropic Serif font assets
+│   ├── Codeforces_Diff_Extraction.md
+│   ├── codechef_diff_extract.md
+│   └── dct - codechef difficulty extractio.txt
+├── MD files/
+│   ├── FUTURE_FEATURES.md      # Roadmap backlog phases
+│   ├── PROGRESS.md             # Implementation progress checklist
+│   └── THE_README_BUILDER.md   # README syntax structure rules
+├── utils/
+│   └── logger.js        # Centralized local & firestore error logging utility
+├── background.js        # Service worker for OAuth and tab management
+├── content.js           # Core solve detection and scraping logic
+├── db-viewer.html       # Persistent tab-based dashboard & DB manager
+├── db-viewer.js         # DB viewer tab routing and dynamic rendering logic
+├── firebase-sync.js     # Vercel OAuth client & Firestore REST query module
+├── manifest.json        # Extension configuration & MV3 permission rules
+├── popup.html           # Mini status dashboard popover
+├── popup.js             # Popover stats calculation and display logic
+├── GEMINI.md            # Daily Coding Tracker rules and memory file
+├── Issues_in_dct.md     # Tracking lists of reported issues
+└── README.md            # Project documentation (regenerated)
 ```
 
 ---
@@ -185,10 +208,10 @@ MIT License — feel free to use and modify for personal or public projects.
 
 # ❤️ **Credits**
 
-* **Orbitron & Share Tech Mono** — Typography from Google Fonts.
+* **Anthropic Sans** — Typography font files bundled in the `docs` folder.
 * **Codeforces API** — Official API for problem rating extraction.
 * **CodeChef API** — Official API for difficulty categorization.
-* **Firebase Firestore** — High-performance, zero-pause cloud database.
+* **Firebase Firestore** — High-performance cloud database database.
 
 ---
 

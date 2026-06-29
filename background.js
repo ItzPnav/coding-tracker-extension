@@ -1,7 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  DCT — background.js
-//  Service worker for background tasks (Manifest V3)
-// ─────────────────────────────────────────────────────────────────────────────
+
+importScripts('utils/logger.js');
 
 let authTabId = null;
 
@@ -43,7 +42,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       };
       console.debug('[DCT] User extracted:', user);
     } catch (e) {
-      console.error('[DCT] Failed to decode JWT:', e);
+      logError('background', 'Failed to decode JWT', { error: e.message });
     }
 
     // Save everything popup.js needs

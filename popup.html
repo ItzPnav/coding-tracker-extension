@@ -4,8 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DCT — Daily Coding Tracker</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <!-- Local Anthropic Sans Font Mappings -->
   <style>
+    @font-face {
+      font-family: 'Orbitron';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Display-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Orbitron';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Display-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Share Tech Mono';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Share Tech Mono';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
     :root {
       --bg:        #060a10;
       --bg2:       #0c1420;
@@ -715,8 +752,23 @@
     </div>
   </div>
 
+  <!-- CUSTOM ALERT MODAL -->
+  <div id="custom-alert" style="display: none; position: fixed; inset: 0; background: rgba(6,10,16,0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); padding: 20px;">
+    <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; width: 100%; box-shadow: var(--glow); text-align: center; position: relative;">
+      <div id="custom-alert-icon" style="font-size: 32px; margin-bottom: 10px; filter: drop-shadow(0 0 6px var(--neon));">🏆</div>
+      <h3 id="custom-alert-title" style="font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--neon); margin-bottom: 10px; letter-spacing: 1.5px; text-transform: uppercase;">MESSAGE COPIED</h3>
+      <p id="custom-alert-message" style="font-family: 'Inter', sans-serif; font-size: 11.5px; color: var(--text); margin-bottom: 18px; line-height: 1.5; white-space: pre-line; word-wrap: break-word;">
+        Details here...
+      </p>
+      <button class="btn" id="custom-alert-btn" style="width: auto; padding: 8px 24px; border: 1px solid var(--neon); background: rgba(0,212,255,0.06); color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 11px; border-radius: 6px; cursor: pointer; letter-spacing: 0.8px;">
+        OK
+      </button>
+    </div>
+  </div>
+
 </main>
 
+<script src="utils/logger.js"></script>
 <script src="firebase-sync.js"></script>
 <script src="popup.js"></script>
 

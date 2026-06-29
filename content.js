@@ -209,7 +209,7 @@ async function getCodeChefDifficulty() {
     if (rating < 1800) return `Medium`;
     return `Hard`;
   } catch (e) {
-    console.warn('[DCT] CodeChef API error:', e);
+    logError('content.js', 'CodeChef API error', { error: e.message });
     return 'N/A';
   }
 }
@@ -248,7 +248,7 @@ async function getCodeforcesDifficulty() {
     return classifyCF(rating);
 
   } catch (e) {
-    console.warn('[DCT] Codeforces API error:', e);
+    logError('content.js', 'Codeforces API error', { error: e.message });
     return 'N/A';
   }
 }
@@ -426,6 +426,8 @@ async function saveProblemToLog(data) {
       // ── CONGRATS CARD ──
       injectCongratsCard(data);
     }
+  } catch (e) {
+    logError('content.js', 'Save problem to log failed', { error: e.message, data });
   } finally {
     isSaving = false;
   }
@@ -815,7 +817,7 @@ async function handleMutation() {
         break;
     }
   } catch (e) {
-    console.warn('[DCT] Difficulty resolution error:', e);
+    logError('content.js', 'Difficulty resolution error', { error: e.message, platform: PLATFORM });
   }
 
   const problemData = {

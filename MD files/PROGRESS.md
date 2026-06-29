@@ -91,6 +91,11 @@
 - [x] HackerRank difficulty pre-seeded before problem page opens
 - [x] Serial numbering in exported logs
 - [x] Blob-based `.txt` file generation with `URL.createObjectURL()`
+- [x] Custom dialog modal overlay system (`#custom-modal`/`#custom-alert`) completely replacing native alert/confirm popups
+- [x] Top-navigation alignment repositioning with correct header padding and focus highlight states
+- [x] Multi-user local storage isolation by wiping `problemLog` on cloud disconnect/logout
+- [x] Vertical responsive alignment using `flex: 1` and top-padding bug resolution for Time of Day Distribution chart
+- [x] Vibrant green GitHub-style heatmap gradient scaling
 
 ---
 

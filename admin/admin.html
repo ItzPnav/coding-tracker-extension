@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DCT — Admin Dashboard</title>
+  <style>
+    @font-face {
+      font-family: 'Orbitron';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Display-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Orbitron';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Display-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Share Tech Mono';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Share Tech Mono';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Regular-Static.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('../docs/Anthropic%20Sans-fontiko/AnthropicSans-Text-Bold-Static.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    :root {
+      --bg:        #060a10;
+      --bg2:       #0c1420;
+      --bg3:       #101c2e;
+      --border:    #1a3050;
+      --border2:   #0e4a7a;
+      --neon:      #00d4ff;
+      --neon2:     #0af;
+      --green:     #00ff88;
+      --orange:    #ff8c00;
+      --red:       #ff4060;
+      --mid:       #ffd060;
+      --easy:      #00e5a0;
+      --hard:      #ff4060;
+      --text:      #c8dff0;
+      --text-dim:  #4a6880;
+      --text-mute: #2a4860;
+      --glow:      0 0 12px rgba(0,212,255,0.35);
+      --glow2:     0 0 20px rgba(0,212,255,0.15);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-y: scroll;
+    }
+
+    /* grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* corner ambient */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -100px; left: -100px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,212,255,0.04) 0%, transparent 68%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── SCANLINE ── */
+    .scanline {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,255,0.18), transparent);
+      z-index: 9999;
+      pointer-events: none;
+      animation: scan 7s linear infinite;
+    }
+    @keyframes scan {
+      0%   { top: -4px; opacity: 0; }
+      5%   { opacity: 1; }
+      95%  { opacity: 1; }
+      100% { top: 105vh; opacity: 0; }
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      position: relative; z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 28px 80px;
+    }
+
+    /* ── AUTH OVERLAY ── */
+    .auth-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6, 10, 16, 0.96);
+      backdrop-filter: blur(6px);
+      z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .auth-card {
+      background: linear-gradient(160deg, #0d1a28 0%, #080e18 100%);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 40px 36px 32px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 0 0 1px rgba(0,212,255,0.06), 0 32px 64px rgba(0,0,0,0.6), var(--glow2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* top accent line on auth card */
+    .auth-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--neon) 50%, transparent 100%);
+      opacity: 0.7;
+    }
+
+    .auth-logo {
+      display: flex; align-items: center; gap: 12px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .auth-logo-mark {
+      width: 40px; height: 40px;
+      border: 1.5px solid var(--neon);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 16px rgba(0,212,255,0.2), inset 0 0 12px rgba(0,212,255,0.05);
+    }
+
+    .auth-logo-mark svg { width: 20px; height: 20px; }
+
+    .auth-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px; font-weight: bold;
+      color: var(--neon);
+      letter-spacing: 3px;
+      text-shadow: var(--glow);
+    }
+
+    .auth-eyebrow {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 3px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: -16px;
+      margin-bottom: 28px;
+    }
+
+    .input-group { margin-bottom: 18px; }
+
+    .input-group label {
+      display: block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: rgba(0,212,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--neon);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.08), var(--glow);
+    }
+
+    .input-group input::placeholder { color: var(--text-mute); }
+
+    .auth-btn {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(0,100,140,0.6) 0%, rgba(0,60,100,0.8) 100%);
+      border: 1px solid var(--neon);
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px; font-weight: bold;
+      padding: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: 3px;
+      margin-top: 8px;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(0,212,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .auth-btn:hover {
+      background: linear-gradient(135deg, rgba(0,130,180,0.7) 0%, rgba(0,80,130,0.9) 100%);
+      box-shadow: var(--glow), 0 8px 24px rgba(0,0,0,0.4);
+      transform: translateY(-2px);
+    }
+
+    .auth-btn:hover::after { opacity: 1; }
+    .auth-btn:active { transform: translateY(0); }
+
+    .auth-error {
+      color: var(--red);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 1px;
+      margin-top: 14px;
+      text-align: center;
+      display: none;
+      padding: 8px 12px;
+      background: rgba(255,64,96,0.06);
+      border: 1px solid rgba(255,64,96,0.2);
+      border-radius: 6px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 0 0;
+      margin-bottom: 24px;
+      gap: 16px; flex-wrap: wrap;
+    }
+
+    .header-logo {
+      display: flex; align-items: center; gap: 14px;
+    }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(145deg, rgba(0,212,255,0.1) 0%, rgba(0,60,120,0.2) 100%);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 18px rgba(0,212,255,0.12), inset 0 1px 0 rgba(255,255,255,0.04);
+      flex-shrink: 0;
+    }
+
+    .logo-icon svg { width: 22px; height: 22px; }
+
+    .header-wordmark { display: flex; flex-direction: column; gap: 2px; }
+
+    .header-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 19px; font-weight: bold;
+      color: var(--neon);
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px rgba(0,212,255,0.4);
+      line-height: 1;
+    }
+
+    .header-subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 2.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .header-nav {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 1.5px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--border2);
+      color: var(--text);
+      background: rgba(0,212,255,0.04);
+    }
+
+    .nav-btn.active {
+      border-color: var(--neon);
+      color: var(--neon);
+      background: rgba(0,212,255,0.07);
+      box-shadow: var(--glow);
+    }
+
+    .nav-btn-logout {
+      border-color: rgba(255,64,96,0.25) !important;
+      color: var(--red) !important;
+    }
+
+    .nav-btn-logout:hover {
+      background: rgba(255,64,96,0.08) !important;
+      border-color: var(--red) !important;
+      box-shadow: 0 0 12px rgba(255,64,96,0.2) !important;
+    }
+
+    /* header divider bar */
+    .header-bar {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border2), var(--border), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* ── STAT ROW ── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 700px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+
+    .stat-card {
+      background: linear-gradient(145deg, #0d1a28 0%, #09111c 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 18px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon), transparent);
+      opacity: 0.35;
+    }
+
+    .stat-card:hover {
+      border-color: var(--border2);
+      box-shadow: var(--glow2);
+      transform: translateY(-2px);
+    }
+
+    .stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 34px; font-weight: bold;
+      color: var(--neon);
+      line-height: 1;
+      text-shadow: 0 0 22px rgba(0,212,255,0.35);
+    }
+
+    .stat-card.green .stat-value  { color: var(--green); text-shadow: 0 0 22px rgba(0,255,136,0.3); }
+    .stat-card.green::before      { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+    .stat-card.orange .stat-value { color: var(--orange); text-shadow: 0 0 22px rgba(255,140,0,0.3); }
+    .stat-card.orange::before     { background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+    .stat-card.red .stat-value    { color: var(--red); text-shadow: 0 0 22px rgba(255,64,96,0.3); }
+    .stat-card.red::before        { background: linear-gradient(90deg, transparent, var(--red), transparent); }
+
+    .stat-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px; color: var(--text-dim);
+      margin-top: 5px;
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      background: linear-gradient(160deg, #0d1a28 0%, #09121e 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+
+    .panel:hover { border-color: var(--border2); }
+
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,212,255,0.018);
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px; letter-spacing: 2px;
+      color: var(--text);
+    }
+
+    .panel-meta {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 1px;
+      color: var(--neon);
+    }
+
+    .panel-body { padding: 20px 22px; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      padding: 12px 18px;
+      text-align: left;
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(0,212,255,0.04);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tr.expandable-row {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    tr.expandable-row:hover td {
+      background: rgba(0,212,255,0.035);
+    }
+
+    /* ── EXPAND DETAIL PANEL ── */
+    .expanded-container {
+      background: rgba(0,0,0,0.25);
+      border-left: 2px solid var(--neon);
+      border-radius: 0 6px 6px 0;
+      margin: 6px 18px 12px;
+      padding: 16px 18px;
+    }
+
+    /* ── DAY BLOCKS (accordion inside expanded rows) ── */
+    .day-block {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg2);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .day-block:last-child { margin-bottom: 0; }
+    .day-block:hover { border-color: var(--border2); }
+
+    .day-header {
+      padding: 11px 16px;
+      background: rgba(0,212,255,0.025);
+      cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 1px;
+      color: var(--neon);
+      transition: background 0.15s;
+      user-select: none;
+    }
+
+    .day-header:hover { background: rgba(0,212,255,0.05); }
+
+    .day-body {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── BADGES ── */
+    .badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; letter-spacing: 0.8px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .badge-easy   { background: rgba(0,229,160,0.10); color: var(--easy);  border: 1px solid rgba(0,229,160,0.22); }
+    .badge-medium { background: rgba(255,208,96,0.10); color: var(--mid);   border: 1px solid rgba(255,208,96,0.22); }
+    .badge-hard   { background: rgba(255,64,96,0.10);  color: var(--hard);  border: 1px solid rgba(255,64,96,0.22); }
+    .badge-expert { background: rgba(204,107,255,0.10);color: #cc88ff;      border: 1px solid rgba(204,107,255,0.22); }
+    .badge-na     { background: rgba(74,104,128,0.12); color: var(--text-dim); border: 1px solid rgba(74,104,128,0.18); }
+
+    /* source badges */
+    .err-source {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .src-content    { background: rgba(255,64,96,0.10);  color: var(--red);    border: 1px solid rgba(255,64,96,0.22); }
+    .src-firebase   { background: rgba(255,140,0,0.10);  color: var(--orange); border: 1px solid rgba(255,140,0,0.22); }
+    .src-background { background: rgba(0,212,255,0.10);  color: var(--neon);   border: 1px solid rgba(0,212,255,0.22); }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex; gap: 10px;
+      margin-bottom: 18px; flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-bar select,
+    .filter-bar input {
+      background: rgba(0,212,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 0.8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .filter-bar input { flex: 1; min-width: 200px; }
+
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      outline: none;
+      border-color: var(--neon);
+      box-shadow: 0 0 0 2px rgba(0,212,255,0.08);
+    }
+
+    .filter-bar select:hover,
+    .filter-bar input:hover { border-color: var(--border2); }
+
+    /* ── CLEAR ERRORS BTN ── */
+    .btn-danger {
+      background: rgba(255,64,96,0.07);
+      border: 1px solid rgba(255,64,96,0.3);
+      color: var(--red);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 1.5px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-danger:hover {
+      background: rgba(255,64,96,0.14);
+      border-color: var(--red);
+      box-shadow: 0 0 12px rgba(255,64,96,0.18);
+      transform: translateY(-1px);
+    }
+
+    /* ── USER ROW EXTRAS ── */
+    .uid-chip {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px; letter-spacing: 0.5px;
+      color: var(--text-dim);
+      background: rgba(0,212,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      display: inline-block;
+      margin-top: 4px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display-name {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 600;
+      color: var(--text);
+    }
+
+    .solve-count {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px; font-weight: bold;
+      color: var(--neon);
+      text-shadow: 0 0 14px rgba(0,212,255,0.3);
+    }
+
+    .last-active-chip {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 0.5px;
+      color: var(--green);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse-anim 2s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes pulse-anim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── EMPTY STATES ── */
+    .empty-state {
+      text-align: center;
+      padding: 52px 24px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px; letter-spacing: 2px;
+      color: var(--text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 16px;
+      opacity: 0.35;
+    }
+
+    /* ── EXPAND CHEVRON ── */
+    .chevron {
+      font-size: 11px; color: var(--text-dim);
+      transition: transform 0.22s;
+    }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* ── TAB SECTION ── */
+    .tab-view { animation: fadein 0.18s ease; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+<div class="scanline"></div>
+
+<!-- ── AUTH OVERLAY ── -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 7L8 10L4 13" stroke="#00d4ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 13H16" stroke="#00ff88" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="auth-title">DCT ADMIN</div>
+    </div>
+    <div class="auth-eyebrow">SECURE CONSOLE ACCESS</div>
+
+    <div class="input-group">
+      <label for="admin-email">Admin Email</label>
+      <input type="email" id="admin-email" placeholder="admin@example.com" autocomplete="username"/>
+    </div>
+
+    <div class="input-group">
+      <label for="admin-password">Password</label>
+      <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+
+    <button class="auth-btn" id="btn-login">AUTHENTICATE</button>
+    <div class="auth-error" id="auth-error">Authentication failed. Check credentials.</div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="1.5" width="19" height="19" rx="5" stroke="#00d4ff" stroke-width="1.2" stroke-dasharray="4 2" opacity="0.6"/>
+          <path d="M6 8L10 11L6 14" stroke="#00d4ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 14H17" stroke="#00ff88" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="17" cy="6" r="2" fill="#00d4ff" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="header-wordmark">
+        <div class="header-title">DCT ADMIN</div>
+        <div class="header-subtitle">System Operations · Cloud Control</div>
+      </div>
+    </div>
+
+    <div class="header-nav">
+      <button class="nav-btn active" id="btn-tab-users" data-tab="users">⬡ USERS</button>
+      <button class="nav-btn" id="btn-tab-errors" data-tab="errors">⚠ ERROR LOGS</button>
+      <button class="nav-btn" id="btn-toggle-dev" style="border: 1px solid rgba(0,212,255,0.3); color: var(--neon); background: rgba(0,212,255,0.06); font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.8px; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">
+        ⚡ <span id="btn-toggle-dev-text">UNLOCK DEV MODE</span>
+      </button>
+      <button class="nav-btn nav-btn-logout" id="btn-logout">✕ LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="header-bar"></div>
+
+  <!-- Global stat cards — populated by admin.js -->
+  <div class="stat-row" id="global-stats" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="gs-users">—</div>
+      <div class="stat-sub">registered accounts</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Total Solves</div>
+      <div class="stat-value" id="gs-solves">—</div>
+      <div class="stat-sub">across all users</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Active Today</div>
+      <div class="stat-value" id="gs-today">—</div>
+      <div class="stat-sub">users with solves today</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Error Signals</div>
+      <div class="stat-value" id="gs-errors">—</div>
+      <div class="stat-sub">logged in last 24h</div>
+    </div>
+  </div>
+
+  <!-- ── TAB: USERS ── -->
+  <section id="view-users" class="tab-view">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">ACTIVE USER PROFILES</div>
+        <div class="panel-meta" id="users-count">Loading users...</div>
+      </div>
+      <div class="table-wrap">
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th style="width:48px;">#</th>
+              <th>User</th>
+              <th>Total Solves</th>
+              <th>Active Days</th>
+              <th>Last Active</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <span class="empty-state-icon">🔐</span>
+                  AUTHENTICATE TO LOAD DATABASE RECORDS
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB: ERROR LOGS ── -->
+  <section id="view-errors" class="tab-view hidden">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">SYSTEM ERROR LOGS</div>
+        <button class="btn-danger" id="btn-clear-errors">🗑 CLEAR ALL LOGS</button>
+      </div>
+      <div class="panel-body">
+        <div class="filter-bar">
+          <select id="filter-err-user">
+            <option value="">All Users</option>
+          </select>
+          <select id="filter-err-source">
+            <option value="">All Sources</option>
+            <option value="content.js">content.js</option>
+            <option value="firebase-sync">firebase-sync</option>
+            <option value="background">background</option>
+            <option value="popup.js">popup.js</option>
+          </select>
+          <input type="text" id="filter-err-search" placeholder="🔍  Search message or URL..."/>
+        </div>
+
+        <div class="table-wrap">
+          <table id="errors-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Source</th>
+                <th>Message</th>
+                <th>Context URL</th>
+                <th>User UID</th>
+              </tr>
+            </thead>
+            <tbody id="errors-tbody">
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <span class="empty-state-icon">📡</span>
+                    NO ERROR SIGNALS CAPTURED YET
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- CUSTOM MODAL CONFIRM/ALERT -->
+<div id="custom-modal" style="display: none; position: fixed; inset: 0; background: rgba(6,10,16,0.75); z-index: 10100; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+  <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 28px; max-width: 420px; width: 90%; box-shadow: var(--glow); text-align: center; position: relative;">
+    <div id="custom-modal-icon" style="font-size: 40px; margin-bottom: 12px; filter: drop-shadow(0 0 8px var(--red));">⚠️</div>
+    <h3 id="custom-modal-title" style="font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--red); margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;">WARNING</h3>
+    <p id="custom-modal-message" style="font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text); margin-bottom: 24px; line-height: 1.6; word-wrap: break-word;">
+      This will permanently delete all your data. Are you sure?
+    </p>
+    <div style="display: flex; gap: 14px; justify-content: center;">
+      <button class="nav-btn" id="custom-modal-btn-cancel" style="padding: 10px 20px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; cursor: pointer; border: 1px solid var(--border); background: var(--bg2); color: var(--text);">CANCEL</button>
+      <button class="nav-btn" id="custom-modal-btn-confirm" style="padding: 10px 20px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; cursor: pointer; background: rgba(255,64,96,0.1); border: 1px solid var(--red); color: var(--red);">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script src="../firebase-sync.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

@@ -102,7 +102,8 @@ const FirebaseSync = {
           difficulty: { stringValue: data.difficulty || '' },
           url:        { stringValue: data.url || '' },
           openedAt:   { stringValue: data.openedAt || '' },
-          timestamp:  { stringValue: data.timestamp || '' }
+          timestamp:  { stringValue: data.timestamp || '' },
+          userId:     { stringValue: userId || '' }
         }
       };
 
@@ -172,7 +173,7 @@ const FirebaseSync = {
       });
     } catch (e) {
       console.error('[DCT-Firebase] Pull failed:', e);
-      return [];
+      throw e;
     }
   },
 
@@ -205,6 +206,45 @@ const FirebaseSync = {
       }
     } catch (e) {
       console.error('[DCT-Firebase] Network error during delete:', e);
+    }
+  },
+
+  /**
+   * Push an error entry to Firebase Firestore
+   */
+  async pushError(entry, userId) {
+    if (!userId || FIREBASE_CONFIG.projectId === 'YOUR_FIREBASE_PROJECT_ID') return;
+    try {
+      const token = await this.getValidToken();
+      if (!token) return;
+      const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/users/${userId}/errors/${entry.id}`;
+      
+      const payload = {
+        fields: {
+          id: { stringValue: entry.id },
+          source: { stringValue: entry.source },
+          message: { stringValue: entry.message },
+          data: { stringValue: JSON.stringify(entry.data) },
+          timestamp: { stringValue: entry.timestamp },
+          url: { stringValue: entry.url },
+          userAgent: { stringValue: entry.userAgent }
+        }
+      };
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.warn('[DCT-Firebase] Error push failed:', err.error?.message || err);
+      }
+    } catch (e) {
+      console.error('[DCT-Firebase] Error push network failed:', e);
     }
   },
 
@@ -395,8 +435,26 @@ const FirebaseSync = {
   updateStatusPageUser(email) {
     const el = document.getElementById('success-email');
     if (el) el.textContent = `Linked: ${email}`;
+  },
+
+  /**
+   * Manually triggers a Firebase token refresh using stored refresh token
+   */
+  async refreshToken() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['firebase_refresh_token'], async (r) => {
+        if (!r.firebase_refresh_token) {
+          resolve(null);
+          return;
+        }
+        const fresh = await this.refreshFirebaseToken(r.firebase_refresh_token);
+        resolve(fresh ? fresh.idToken : null);
+      });
+    });
   }
 };
+
+window.FirebaseSync = FirebaseSync;
 
 // Auto-run capture on allowed domains
 const currentHost = window.location.hostname;
