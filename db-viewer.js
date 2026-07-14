@@ -436,8 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get(['theme'], (result) => {
     if (result.theme === 'light') {
       document.documentElement.classList.add('light-theme');
-      const headerThemeBtn = document.getElementById('btn-theme');
-      if (headerThemeBtn) headerThemeBtn.textContent = '🌙';
+      const settingsThemeBtn = document.getElementById('settings-btn-theme');
+      if (settingsThemeBtn) settingsThemeBtn.textContent = 'Toggle Theme 🌙';
     }
   });
 
@@ -452,7 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTheme.addEventListener('click', () => {
       const isLight = document.documentElement.classList.toggle('light-theme');
       chrome.storage.local.set({ theme: isLight ? 'light' : 'dark' });
-      btnTheme.textContent = isLight ? '🌙' : '☀';
+      const settingsThemeBtn = document.getElementById('settings-btn-theme');
+      if (settingsThemeBtn) settingsThemeBtn.textContent = isLight ? 'Toggle Theme 🌙' : 'Toggle Theme ☀';
     });
   }
 
@@ -583,8 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtnTheme.addEventListener('click', () => {
       const isLight = document.documentElement.classList.toggle('light-theme');
       chrome.storage.local.set({ theme: isLight ? 'light' : 'dark' });
-      const headerThemeBtn = document.getElementById('btn-theme');
-      if (headerThemeBtn) headerThemeBtn.textContent = isLight ? '🌙' : '☀';
+      settingsBtnTheme.textContent = isLight ? 'Toggle Theme 🌙' : 'Toggle Theme ☀';
     });
   }
 
@@ -898,6 +898,9 @@ function updateCloudTabUI(user) {
   const btnLogin = document.getElementById('cloud-btn-login');
   const btnLogout = document.getElementById('cloud-btn-logout');
 
+  const cloudOnSvg = document.querySelector('.nav-icon-cloud-on');
+  const cloudOffSvg = document.querySelector('.nav-icon-cloud-off');
+
   if (user) {
     if (badgeConnected) badgeConnected.style.display = 'flex';
     if (badgeOffline) badgeOffline.style.display = 'none';
@@ -905,6 +908,9 @@ function updateCloudTabUI(user) {
     if (lastSyncVal) lastSyncVal.textContent = new Date().toLocaleString();
     if (btnLogin) btnLogin.classList.add('hidden');
     if (btnLogout) btnLogout.classList.remove('hidden');
+
+    if (cloudOnSvg) cloudOnSvg.style.display = 'block';
+    if (cloudOffSvg) cloudOffSvg.style.display = 'none';
   } else {
     if (badgeConnected) badgeConnected.style.display = 'none';
     if (badgeOffline) badgeOffline.style.display = 'flex';
@@ -912,6 +918,9 @@ function updateCloudTabUI(user) {
     if (lastSyncVal) lastSyncVal.textContent = 'N/A';
     if (btnLogin) btnLogin.classList.remove('hidden');
     if (btnLogout) btnLogout.classList.add('hidden');
+
+    if (cloudOnSvg) cloudOnSvg.style.display = 'none';
+    if (cloudOffSvg) cloudOffSvg.style.display = 'block';
   }
 }
 

@@ -675,6 +675,80 @@
       width: 40%;
     }
 
+    /* Light Theme Navigation overrides */
+    :root.light-theme .nav-bar {
+      background: linear-gradient(
+        to bottom,
+        rgba(240, 244, 248, 0.98) 0%,
+        rgba(255, 255, 255, 0.92) 100%
+      );
+      box-shadow:
+        0 1px 0 rgba(2,132,199,0.08),
+        0 8px 32px rgba(0,0,0,0.06),
+        0 2px 16px rgba(2,132,199,0.04);
+    }
+    :root.light-theme .nav-bar::before {
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(2,132,199,0.2) 30%,
+        rgba(2,132,199,0.2) 70%,
+        transparent
+      );
+    }
+    :root.light-theme .nav-item:hover > span:first-child {
+      filter: drop-shadow(0 0 6px rgba(2,132,199,0.35));
+    }
+    :root.light-theme .nav-item.active {
+      text-shadow: 0 0 10px rgba(2,132,199,0.25);
+    }
+    :root.light-theme .nav-item.active > span:first-child {
+      filter: drop-shadow(0 0 8px rgba(2,132,199,0.35));
+    }
+    :root.light-theme .nav-item::after {
+      box-shadow: 0 0 8px rgba(2,132,199,0.3);
+    }
+
+    /* Theme Toggle Button SVGs */
+    #btn-theme svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #btn-theme .theme-icon-sun {
+      display: block;
+    }
+    #btn-theme .theme-icon-moon {
+      display: none;
+    }
+    :root.light-theme #btn-theme .theme-icon-sun {
+      display: none;
+    }
+    :root.light-theme #btn-theme .theme-icon-moon {
+      display: block;
+    }
+    #btn-theme:hover svg {
+      transform: rotate(20deg);
+    }
+
+    /* Navigation SVGs */
+    .nav-svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      transition: stroke 0.2s ease, transform 0.2s ease;
+    }
+
+    /* Cool transition look when theme toggles */
+    body, .panel, .stat-card, .header, .nav-bar, .recent-row, .heatmap-day, td, th {
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                  box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     /* Heatmap Calendar styles */
     .heatmap-grid {
       display: grid;
@@ -907,7 +981,16 @@
       <div class="synced-badge" id="synced-badge" style="display:none;">
         <span class="synced-dot"></span>Synced
       </div>
-      <button class="btn-icon" id="btn-theme" title="Toggle theme">☀</button>
+      <button class="btn-icon" id="btn-theme" title="Toggle theme">
+        <!-- Sun SVG (shows in Dark Mode) -->
+        <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+        </svg>
+        <!-- Moon SVG (shows in Light Mode) -->
+        <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
+        </svg>
+      </button>
       <button class="header-btn" id="btn-close">✕ CLOSE</button>
     </div>
   </div>
@@ -926,7 +1009,12 @@
       <div class="stat-card accent-green">
         <span class="stat-lbl">Current Streak</span>
         <div class="stat-num" id="s-streak">—</div>
-        <div class="stat-sub">Days 🔥</div>
+        <div class="stat-sub" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+          Days 
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,140,0,0.15)" stroke="var(--orange, #ff8c00)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px rgba(255,140,0,0.6)); display: inline-block; vertical-align: middle;">
+            <path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>
+          </svg>
+        </div>
       </div>
       <div class="stat-card accent-mid">
         <span class="stat-lbl">Daily Avg</span>
@@ -1195,23 +1283,52 @@
 <!-- BOTTOM NAV BAR -->
 <div class="nav-bar">
   <button class="nav-item active" data-tab="dashboard">
-    <span style="font-size: 18px;">🏠</span>
+    <span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
+        <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      </svg>
+    </span>
     <span>Dashboard</span>
   </button>
   <button class="nav-item" data-tab="history">
-    <span style="font-size: 18px;">📋</span>
+    <span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v4"/><path d="M12 2v4"/><path d="M16 2v4"/>
+        <rect width="16" height="18" x="4" y="4" rx="2"/>
+        <path d="M8 10h6"/><path d="M8 14h8"/><path d="M8 18h5"/>
+      </svg>
+    </span>
     <span>History</span>
   </button>
   <button class="nav-item" data-tab="analytics">
-    <span style="font-size: 18px;">📊</span>
+    <span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>
+      </svg>
+    </span>
     <span>Analytics</span>
   </button>
   <button class="nav-item" data-tab="cloud">
-    <span style="font-size: 18px;">☁</span>
+    <span style="position: relative; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px;">
+      <svg class="nav-svg nav-icon-cloud-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+      </svg>
+      <svg class="nav-svg nav-icon-cloud-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+        <path d="M10.94 5.274A7 7 0 0 1 15.71 10h1.79a4.5 4.5 0 0 1 4.222 6.057"/>
+        <path d="M18.796 18.81A4.5 4.5 0 0 1 17.5 19H9A7 7 0 0 1 5.79 5.78"/>
+        <path d="m2 2 20 20"/>
+      </svg>
+    </span>
     <span>Cloud</span>
   </button>
   <button class="nav-item" data-tab="settings">
-    <span style="font-size: 18px;">⚙</span>
+    <span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </span>
     <span>Settings</span>
   </button>
 </div>

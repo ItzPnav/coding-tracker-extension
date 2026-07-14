@@ -7,6 +7,8 @@ let PAGE_OPEN_TIME = new Date().toISOString(); // record when tab was opened
 let lastUrl = window.location.href;
 let alreadyLogged = false;
 let lastHRResultState = ''; // tracks HackerRank result text to reset alreadyLogged on new submissions
+let hrSubmitClicked = false; // tracks if HackerRank 'Submit Code' was clicked
+let hrNextChallengeClicked = false; // tracks if HackerRank 'Next Challenge' was clicked
 
 // ─── DETECT PLATFORM ─────────────────────────────────────────────────────────
 function getPlatform() {
@@ -294,6 +296,8 @@ function isSolvedNow() {
       return isSuccessfulLeetCodeSubmission();
     }
     case 'hackerrank': {
+      if (!hrSubmitClicked) return false;
+
       // Scope detection to the submission result container only.
       // Searching full bodyText causes false positives from achievement
       // banners, profile sections, and leaderboard text that also contain
@@ -301,9 +305,16 @@ function isSolvedNow() {
       const resultContainer =
         document.querySelector('.result-container, .challenge-result, [class*="result-state"], .submissions-list');
       const searchText = resultContainer ? resultContainer.innerText : bodyText;
-      return /You solved this challenge/i.test(searchText) ||
-             /Congratulations/i.test(searchText) ||
-             /\bCorrect\b/i.test(searchText);
+      const solved = /You solved this challenge/i.test(searchText) ||
+                     /Congratulations/i.test(searchText) ||
+                     /\bCorrect\b/i.test(searchText);
+
+      if (solved) {
+        console.log('[DCT-HR] Solve detected after Submit Code click!');
+        hrSubmitClicked = false; // Reset the flag once successfully detected
+        return true;
+      }
+      return false;
     }
     case 'codechef':
       return /\bAccepted\b/i.test(bodyText) || /Correct Answer/i.test(bodyText);
@@ -767,12 +778,21 @@ async function handleMutation() {
 
     if (PLATFORM === 'hackerrank') {
       scanHackerRankList();
+      hrSubmitClicked = false; // Reset submit flag on navigation
     }
 
     // Check for previous solve on URL change
     const problemId = getProblemId();
     if (problemId) {
-      checkPreviousSolve(problemId);
+      if (PLATFORM === 'hackerrank' && hrNextChallengeClicked) {
+        console.log('[DCT-HR] Suppressed already solved alert due to Next Challenge navigation.');
+      } else {
+        checkPreviousSolve(problemId);
+      }
+    }
+
+    if (PLATFORM === 'hackerrank') {
+      hrNextChallengeClicked = false; // Always reset next challenge flag after URL transition checks
     }
   }
 
@@ -837,6 +857,25 @@ async function handleMutation() {
 if (PLATFORM === 'hackerrank') {
   scanHackerRankList();
 }
+
+// Track button clicks for HackerRank submissions and navigation
+document.addEventListener('click', (e) => {
+  if (PLATFORM !== 'hackerrank') return;
+
+  // Track click on Submit Code button
+  const submitBtn = e.target.closest('button.hr-monaco-submit');
+  if (submitBtn) {
+    console.log('[DCT-HR] Submit Code button clicked!');
+    hrSubmitClicked = true;
+  }
+
+  // Track click on Next Challenge button
+  const nextChallengeBtn = e.target.closest('a.submission-wrapper-next-entity-btn');
+  if (nextChallengeBtn) {
+    console.log('[DCT-HR] Next Challenge button clicked!');
+    hrNextChallengeClicked = true;
+  }
+});
 
 const observer = new MutationObserver(handleMutation);
 observer.observe(document.body, { childList: true, subtree: true });
