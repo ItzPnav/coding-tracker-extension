@@ -328,80 +328,95 @@ function render() {
 }
 
 // ── LOAD ─────────────────────────────────────────────────────────────────────
-async function init() {
+async function init(forcePull = false) {
   document.getElementById('footer-ts').textContent =
     'LOADED: ' + new Date().toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit', hour12:false });
 
   const titleEl = document.querySelector('.header-sub');
 
-  chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled', 'firebase_expires_at'], async (result) => {
-    // 1. Deduplicate local log to handle any legacy race conditions
-    const rawLocal = result.problemLog || [];
-    const localLog = [];
-    const localIds = new Set();
-    
-    rawLocal.forEach(p => {
-      if (!p.problemId) return; // ignore invalid entries
-      if (!localIds.has(p.problemId)) {
-        localLog.push(p);
-        localIds.add(p.problemId);
-      }
-    });
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled', 'firebase_expires_at', 'hasPulledFromCloud'], async (result) => {
+      // 1. Deduplicate local log to handle any legacy race conditions
+      const rawLocal = result.problemLog || [];
+      const localLog = [];
+      const localIds = new Set();
+      
+      rawLocal.forEach(p => {
+        if (!p.problemId) return; // ignore invalid entries
+        if (!localIds.has(p.problemId)) {
+          localLog.push(p);
+          localIds.add(p.problemId);
+        }
+      });
 
-    ALL_PROBLEMS = localLog;
+      ALL_PROBLEMS = localLog;
 
-    if (result.isCloudEnabled && result.user?.id) {
-      // Check token expiry — Firebase tokens last 1 hour
-      const expiresAt = result.firebase_expires_at || 0;
-      if (Date.now() > (expiresAt - 5 * 60 * 1000)) {
-        console.warn('[DCT] Firebase token expiring soon or expired, triggering refresh');
-        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.refreshToken) {
-          await FirebaseSync.refreshToken();
+      if (result.isCloudEnabled && result.user?.id) {
+        // Check token expiry — Firebase tokens last 1 hour
+        const expiresAt = result.firebase_expires_at || 0;
+        if (Date.now() > (expiresAt - 5 * 60 * 1000)) {
+          console.warn('[DCT] Firebase token expiring soon or expired, triggering refresh');
+          if (typeof FirebaseSync !== 'undefined' && FirebaseSync.refreshToken) {
+            await FirebaseSync.refreshToken();
+          }
         }
       }
-    }
 
-    if (result.isCloudEnabled && result.user?.id) {
-      if (titleEl) titleEl.textContent = 'SYNCING CLOUD DATABASE...';
-      
-      const cloudLog = await FirebaseSync.pullHistory(result.user.id).catch(err => {
-        console.error('[DCT] Firestore pull failed:', err);
-        if (titleEl) titleEl.textContent = 'CLOUD SYNC FAILED — CHECK CONSOLE';
-        return null;
-      });
-      
-      if (cloudLog && cloudLog.length > 0) {
-        // 2. Merge cloud into local, ensuring absolute uniqueness
-        const merged = [...localLog];
-        const mergedIds = new Set(localIds);
+      let syncSuccess = true;
+      if (result.isCloudEnabled && result.user?.id) {
+        const shouldPull = !result.hasPulledFromCloud || forcePull;
+        if (shouldPull) {
+          if (titleEl) titleEl.textContent = 'SYNCING CLOUD DATABASE...';
+          
+          const cloudLog = await FirebaseSync.pullHistory(result.user.id).catch(err => {
+            console.error('[DCT] Firestore pull failed:', err);
+            if (titleEl) titleEl.textContent = 'CLOUD SYNC FAILED — CHECK CONSOLE';
+            syncSuccess = false;
+            return null;
+          });
+          
+          if (cloudLog) {
+            if (cloudLog.length > 0) {
+              // 2. Merge cloud into local, ensuring absolute uniqueness
+              const merged = [...localLog];
+              const mergedIds = new Set(localIds);
 
-        cloudLog.forEach(cloudItem => {
-          if (!cloudItem.problemId) return;
-          if (!mergedIds.has(cloudItem.problemId)) {
-            merged.push(cloudItem);
-            mergedIds.add(cloudItem.problemId);
+              cloudLog.forEach(cloudItem => {
+                if (!cloudItem.problemId) return;
+                if (!mergedIds.has(cloudItem.problemId)) {
+                  merged.push(cloudItem);
+                  mergedIds.add(cloudItem.problemId);
+                }
+              });
+              
+              // Sort newest first globally
+              merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+              ALL_PROBLEMS = merged;
+            }
+            
+            if (titleEl && titleEl.textContent !== 'CLOUD SYNC FAILED — CHECK CONSOLE') {
+              titleEl.textContent = 'CLOUD DATABASE SYNCED · ALL PLATFORMS';
+            }
+            chrome.storage.local.set({ problemLog: ALL_PROBLEMS, hasPulledFromCloud: true });
+          } else {
+            syncSuccess = false;
           }
-        });
-        
-        // Sort newest first globally
-        merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        ALL_PROBLEMS = merged;
+        } else {
+          if (titleEl) titleEl.textContent = 'CLOUD DATABASE SYNCED (CACHED) · ALL PLATFORMS';
+        }
       }
-      
-      if (titleEl && titleEl.textContent !== 'CLOUD SYNC FAILED — CHECK CONSOLE') {
-        titleEl.textContent = 'CLOUD DATABASE SYNCED · ALL PLATFORMS';
+
+      // Auto-open today
+      const today = todayKey();
+      if (ALL_PROBLEMS.some(p => dayKey(p.timestamp) === today)) {
+        openDays.add(today);
       }
-    }
 
-    // Auto-open today
-    const today = todayKey();
-    if (ALL_PROBLEMS.some(p => dayKey(p.timestamp) === today)) {
-      openDays.add(today);
-    }
-
-    window.ALL_PROBLEMS = ALL_PROBLEMS;
-    render();
-    if (typeof renderAnalytics === 'function') renderAnalytics(ALL_PROBLEMS);
+      window.ALL_PROBLEMS = ALL_PROBLEMS;
+      render();
+      if (typeof renderAnalytics === 'function') renderAnalytics(ALL_PROBLEMS);
+      resolve(syncSuccess);
+    });
   });
 }
 
@@ -526,11 +541,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const cloudBtnSync = document.getElementById('cloud-btn-sync');
   if (cloudBtnSync) {
     cloudBtnSync.addEventListener('click', async () => {
-      cloudBtnSync.textContent = '🔄 SYNCING...';
-      cloudBtnSync.disabled = true;
-      await init();
-      cloudBtnSync.textContent = '🔄 SYNC NOW';
-      cloudBtnSync.disabled = false;
+      chrome.storage.local.get(['lastManualSyncTime', 'isCloudEnabled', 'user'], async (r) => {
+        if (!r.isCloudEnabled || !r.user?.id) {
+          showCustomAlert('SYNC INFO', 'Please connect to Firebase Cloud Sync first.', false);
+          return;
+        }
+
+        const now = Date.now();
+        const lastSync = r.lastManualSyncTime || 0;
+        const cooldown = 3 * 60 * 60 * 1000; // 3 hours
+        const elapsed = now - lastSync;
+
+        if (elapsed < cooldown) {
+          const remainingMs = cooldown - elapsed;
+          const remainingHours = Math.floor(remainingMs / (3600 * 1000));
+          const remainingMins = Math.ceil((remainingMs % (3600 * 1000)) / (60 * 1000));
+          
+          let timeStr = '';
+          if (remainingHours > 0) {
+            timeStr = `${remainingHours}h ${remainingMins}m`;
+          } else {
+            timeStr = `${remainingMins}m`;
+          }
+
+          showCustomAlert(
+            'RATE LIMIT EXCEEDED',
+            `Manual sync is limited to once every 3 hours. Please wait ${timeStr} before syncing manually again. (Automatic sync on solve is still active).`,
+            false
+          );
+          return;
+        }
+
+        // Show the info dialog box
+        showCustomAlert(
+          'SYNCING...',
+          'Firestore pull initiated! Note: The extension automatically saves solves to the cloud in real-time when you solve a problem.',
+          true
+        );
+
+        cloudBtnSync.textContent = '🔄 SYNCING...';
+        cloudBtnSync.disabled = true;
+
+        const success = await init(true);
+
+        if (success) {
+          chrome.storage.local.set({ lastManualSyncTime: now });
+        }
+
+        cloudBtnSync.textContent = '🔄 SYNC NOW';
+        cloudBtnSync.disabled = false;
+      });
     });
   }
 
@@ -563,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Disconnect from Firebase cloud sync? To prevent user mix-ups, your local storage history will be cleared (cloud history remains safe).', 
         false, 
         () => {
-          chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at'], () => {
+          chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at', 'hasPulledFromCloud', 'lastManualSyncTime'], () => {
             chrome.storage.local.set({ problemLog: [] }, () => {
               updateCloudTabUI(null);
               ALL_PROBLEMS = [];

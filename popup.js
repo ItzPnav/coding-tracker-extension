@@ -268,7 +268,15 @@ async function syncCloudData(userId) {
   // Get current user for UI update
   chrome.storage.local.get(['user'], async (r) => {
     updateAuthUI(r.user, true); 
-    const cloudLog = await FirebaseSync.pullHistory(userId);
+    
+    let cloudLog;
+    try {
+      cloudLog = await FirebaseSync.pullHistory(userId);
+    } catch (err) {
+      console.error('[DCT] Firestore pull failed in popup:', err);
+      updateAuthUI(r.user, false);
+      return;
+    }
     
     chrome.storage.local.get(['problemLog', 'user'], (result) => {
       // 1. Deduplicate local log first
@@ -286,26 +294,30 @@ async function syncCloudData(userId) {
       let mergedIds = new Set(localIds);
       let addedCount = 0;
 
-      cloudLog.forEach(cloudItem => {
-        if (!cloudItem.problemId) return;
-        if (!mergedIds.has(cloudItem.problemId)) {
-          // Only merge cloud items from today — don't resurface cleared history into popup
-          if (getItemDay(cloudItem) !== todayKey()) return;
-          merged.push(cloudItem);
-          mergedIds.add(cloudItem.problemId);
-          addedCount++;
-        }
-      });
+      if (cloudLog && cloudLog.length > 0) {
+        cloudLog.forEach(cloudItem => {
+          if (!cloudItem.problemId) return;
+          if (!mergedIds.has(cloudItem.problemId)) {
+            // Only merge cloud items from today — don't resurface cleared history into popup
+            if (getItemDay(cloudItem) !== todayKey()) return;
+            merged.push(cloudItem);
+            mergedIds.add(cloudItem.problemId);
+            addedCount++;
+          }
+        });
+      }
 
       if (addedCount > 0 || localLog.length !== rawLocal.length) {
         merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        chrome.storage.local.set({ problemLog: merged }, () => {
+        chrome.storage.local.set({ problemLog: merged, hasPulledFromCloud: true }, () => {
           renderStats(merged);
           renderList(merged);
           updateAuthUI(result.user, false);
         });
       } else {
-        updateAuthUI(result.user, false);
+        chrome.storage.local.set({ hasPulledFromCloud: true }, () => {
+          updateAuthUI(result.user, false);
+        });
       }
     });
   });
@@ -349,7 +361,7 @@ async function handleLogin() {
 
 function handleLogout() {
   // Clear local session and Firebase tokens
-  chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at'], () => {
+  chrome.storage.local.remove(['user', 'isCloudEnabled', 'firebase_token', 'firebase_refresh_token', 'firebase_expires_at', 'hasPulledFromCloud', 'lastManualSyncTime'], () => {
     chrome.storage.local.set({ problemLog: [] }, () => {
       updateAuthUI(null);
       renderStats([]);
@@ -398,14 +410,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await checkAndClearLog();
 
-  chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled'], (result) => {
+  chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled', 'hasPulledFromCloud'], (result) => {
     const log = result.problemLog || [];
     renderStats(log);
     renderList(log);
     updateAuthUI(result.user);
 
     if (result.isCloudEnabled && result.user?.id) {
-      syncCloudData(result.user.id);
+      if (!result.hasPulledFromCloud) {
+        syncCloudData(result.user.id);
+      }
     }
   });
 
