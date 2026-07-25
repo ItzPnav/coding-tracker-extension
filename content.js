@@ -9,6 +9,7 @@ let alreadyLogged = false;
 let lastHRResultState = ''; // tracks HackerRank result text to reset alreadyLogged on new submissions
 let hrSubmitClicked = false; // tracks if HackerRank 'Submit Code' was clicked
 let hrNextChallengeClicked = false; // tracks if HackerRank 'Next Challenge' was clicked
+let lcSubmitClicked = false; // tracks if LeetCode 'Submit' was clicked or shortcut triggered
 
 // ─── DETECT PLATFORM ─────────────────────────────────────────────────────────
 function getPlatform() {
@@ -78,59 +79,60 @@ function getLeetCodeDifficulty() {
   return 'N/A';
 }
 
-function findLeetCodeSubmissionHistoryEntry() {
-  const elements = Array.from(document.querySelectorAll('span, div'));
-  for (const el of elements) {
-    const text = el.textContent || '';
-    if (text.includes('submitted at')) {
-      let ancestor = el;
-      // Search up to 4 parent levels for the username profile link
-      for (let i = 0; i < 4; i++) {
-        if (!ancestor || ancestor === document.body) break;
-        const profileLink = ancestor.querySelector('a[href^="/u/"], a[href*="/u/"]');
-        if (profileLink) {
-          const href = profileLink.getAttribute('href');
-          const match = href.match(/\/u\/([^/]+)/);
-          if (match && match[1]) {
-            const username = match[1].trim();
-            const fullText = ancestor.textContent.replace(/\s+/g, ' ').trim();
-            const patternStr = `${username} submitted at`;
-            if (fullText.includes(patternStr)) {
-              const index = fullText.indexOf('submitted at');
-              const timestampPart = fullText.substring(index + 'submitted at'.length).trim();
-              // Match timestamp (e.g. "Jun 22, 2026 19:01")
-              const timeMatch = timestampPart.match(/^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}\s+\d{2}:\d{2}/);
-              if (timeMatch) {
-                return {
-                  username: username,
-                  timestampStr: timeMatch[0]
-                };
-              }
-            }
-          }
-        }
-        ancestor = ancestor.parentElement;
+function isSuccessfulLeetCodeSubmission() {
+  const resultEl = document.querySelector('[data-e2e-locator="submission-result"]');
+  if (resultEl) {
+    const text = resultEl.textContent.trim();
+    if (text === 'Pending' || text === 'Judging') {
+      if (!lcSubmitClicked) {
+        console.log('[DCT-LC] Submission pending/judging state detected. Setting lcSubmitClicked = true.');
+        lcSubmitClicked = true;
       }
+      return false;
     }
   }
-  return null;
-}
 
-function isSuccessfulLeetCodeSubmission() {
-  const entry = findLeetCodeSubmissionHistoryEntry();
-  if (!entry) {
-    console.log('[LC]\n\nSubmission history entry not detected.');
+  if (!lcSubmitClicked) return false;
+
+  // If "Accepted" is not even in the page, it's not solved yet
+  if (!document.body.innerText.includes('Accepted')) {
     return false;
   }
 
-  console.log(
-    '[LC]\n\nSubmission history entry detected.\n\nUser:\n' +
-    entry.username +
-    '\n\nTimestamp:\n' +
-    entry.timestampStr +
-    '\n\nRecording solve.'
+  if (resultEl) {
+    const text = resultEl.textContent.trim();
+    if (text === 'Accepted') {
+      console.log('[DCT-LC] Solve detected via data-e2e-locator="submission-result"!');
+      lcSubmitClicked = false;
+      return true;
+    } else if (text && text !== 'Pending' && text !== 'Judging') {
+      console.log('[DCT-LC] Submission finished with status:', text);
+      lcSubmitClicked = false;
+      return false;
+    }
+  }
+
+  // Fallback 1: Look for elements with class containing success/green/text-green
+  const successEl = document.querySelector(
+    '[class*="success"], [class*="green"], [class*="text-green"], [class*="text-difficulty-easy"], .ant-badge-status-success'
   );
-  return true;
+  if (successEl && successEl.textContent.trim() === 'Accepted') {
+    console.log('[DCT-LC] Solve detected via green/success element text!');
+    lcSubmitClicked = false;
+    return true;
+  }
+
+  // Fallback 2: Exact text search on childless elements
+  const elements = document.querySelectorAll('span, div, p');
+  for (const el of elements) {
+    if (el.children.length === 0 && el.textContent.trim() === 'Accepted') {
+      console.log('[DCT-LC] Solve detected via exact text match "Accepted"!');
+      lcSubmitClicked = false;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function getHackerRankDifficultyFromAPI(slug) {
@@ -786,6 +788,8 @@ async function handleMutation() {
     if (problemId) {
       if (PLATFORM === 'hackerrank' && hrNextChallengeClicked) {
         console.log('[DCT-HR] Suppressed already solved alert due to Next Challenge navigation.');
+      } else if (PLATFORM === 'leetcode' && currentUrl.includes('/submissions/')) {
+        console.log('[DCT-LC] Suppressed already solved alert on submissions URL.');
       } else {
         checkPreviousSolve(problemId);
       }
@@ -858,22 +862,47 @@ if (PLATFORM === 'hackerrank') {
   scanHackerRankList();
 }
 
-// Track button clicks for HackerRank submissions and navigation
+// Track button clicks for submissions and navigation
 document.addEventListener('click', (e) => {
-  if (PLATFORM !== 'hackerrank') return;
+  if (PLATFORM === 'hackerrank') {
+    // Track click on Submit Code button
+    const submitBtn = e.target.closest('button.hr-monaco-submit');
+    if (submitBtn) {
+      console.log('[DCT-HR] Submit Code button clicked!');
+      hrSubmitClicked = true;
+    }
 
-  // Track click on Submit Code button
-  const submitBtn = e.target.closest('button.hr-monaco-submit');
-  if (submitBtn) {
-    console.log('[DCT-HR] Submit Code button clicked!');
-    hrSubmitClicked = true;
+    // Track click on Next Challenge button
+    const nextChallengeBtn = e.target.closest('a.submission-wrapper-next-entity-btn');
+    if (nextChallengeBtn) {
+      console.log('[DCT-HR] Next Challenge button clicked!');
+      hrNextChallengeClicked = true;
+    }
+  } else if (PLATFORM === 'leetcode') {
+    // LeetCode Submit button has data-e2e-locator="console-submit-button" or data-cy="submit-code-btn"
+    const submitBtn = e.target.closest('[data-e2e-locator="console-submit-button"], [data-cy="submit-code-btn"]');
+    if (submitBtn) {
+      console.log('[DCT-LC] LeetCode Submit button clicked!');
+      lcSubmitClicked = true;
+    } else {
+      // Fallback: check if the clicked element or its closest button has text "Submit"
+      const anyBtn = e.target.closest('button');
+      if (anyBtn && anyBtn.textContent.trim() === 'Submit') {
+        console.log('[DCT-LC] LeetCode Submit button (fallback text) clicked!');
+        lcSubmitClicked = true;
+      }
+    }
   }
+});
 
-  // Track click on Next Challenge button
-  const nextChallengeBtn = e.target.closest('a.submission-wrapper-next-entity-btn');
-  if (nextChallengeBtn) {
-    console.log('[DCT-HR] Next Challenge button clicked!');
-    hrNextChallengeClicked = true;
+// Track shortcut keys for LeetCode submissions
+document.addEventListener('keydown', (e) => {
+  if (PLATFORM !== 'leetcode') return;
+
+  // Ctrl+Enter or Cmd+Enter triggers Submit on LeetCode
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    console.log('[DCT-LC] LeetCode Submit shortcut (Ctrl/Cmd + Enter) detected!');
+    lcSubmitClicked = true;
   }
 });
 
