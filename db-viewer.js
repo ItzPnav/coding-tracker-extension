@@ -206,6 +206,7 @@ function toggleDay(day) {
 // ── RENDER ───────────────────────────────────────────────────────────────────
 let ALL_PROBLEMS = [];
 window.ALL_PROBLEMS = ALL_PROBLEMS;
+let IS_ADMIN_MODE = false;
 
 function render() {
   const pf  = document.getElementById('filter-platform').value;
@@ -287,6 +288,7 @@ function render() {
         </td>
         <td class="time-cell">${fmtTime(p.timestamp)}</td>
         <td class="taken-cell">⏱ ${fmtTimeTaken(p.openedAt, p.timestamp)}</td>
+        ${IS_ADMIN_MODE ? '' : `
         <td class="action-cell">
           <div class="action-menu-container">
             <button class="btn-action-trigger" data-id="${p.problemId}">⋮</button>
@@ -295,6 +297,7 @@ function render() {
             </div>
           </div>
         </td>
+        `}
       </tr>`).join('');
 
     return `
@@ -317,7 +320,7 @@ function render() {
                 <th>Platform</th>
                 <th>Solved At</th>
                 <th>Time Taken</th>
-                <th style="width: 50px; text-align: center;">Actions</th>
+                ${IS_ADMIN_MODE ? '' : '<th style="width: 50px; text-align: center;">Actions</th>'}
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -333,6 +336,48 @@ async function init(forcePull = false) {
     'LOADED: ' + new Date().toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit', hour12:false });
 
   const titleEl = document.querySelector('.header-sub');
+
+  // Check adminMode query parameter
+  const params = new URLSearchParams(window.location.search);
+  IS_ADMIN_MODE = params.get('adminMode') === 'true';
+  const adminUid = params.get('uid');
+
+  if (IS_ADMIN_MODE && adminUid) {
+    if (titleEl) {
+      titleEl.textContent = 'ADMIN MODE · VIEWING USER RECORDS';
+    }
+    
+    // Retrieve user's solves from parent window
+    if (window.parent && typeof window.parent.getUserSolves === 'function') {
+      ALL_PROBLEMS = window.parent.getUserSolves(adminUid);
+    } else if (window.parent && window.parent.ALL_SOLVES) {
+      ALL_PROBLEMS = window.parent.ALL_SOLVES.filter(s => s.userId === adminUid);
+    } else {
+      ALL_PROBLEMS = [];
+    }
+
+    // Auto-open today
+    const today = todayKey();
+    if (ALL_PROBLEMS.some(p => dayKey(p.timestamp) === today)) {
+      openDays.add(today);
+    }
+
+    window.ALL_PROBLEMS = ALL_PROBLEMS;
+    render();
+    if (typeof renderAnalytics === 'function') renderAnalytics(ALL_PROBLEMS);
+
+    // Hide cloud & settings tabs in adminMode
+    const cloudNav = document.querySelector('.nav-item[data-tab="cloud"]');
+    if (cloudNav) cloudNav.style.display = 'none';
+    const settingsNav = document.querySelector('.nav-item[data-tab="settings"]');
+    if (settingsNav) settingsNav.style.display = 'none';
+
+    // Hide synced badge in header
+    const syncedBadge = document.getElementById('synced-badge');
+    if (syncedBadge) syncedBadge.style.display = 'none';
+
+    return true; // resolves the promise
+  }
 
   return new Promise((resolve) => {
     chrome.storage.local.get(['problemLog', 'user', 'isCloudEnabled', 'firebase_expires_at', 'hasPulledFromCloud'], async (result) => {
@@ -475,7 +520,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Close button
   const closeBtn = document.getElementById('btn-close');
   if (closeBtn) {
-    closeBtn.addEventListener('click', () => window.close());
+    closeBtn.addEventListener('click', () => {
+      const params = new URLSearchParams(window.location.search);
+      const isAdminMode = params.get('adminMode') === 'true';
+      if (isAdminMode) {
+        if (window.parent && typeof window.parent.closeDbViewerSidePanel === 'function') {
+          window.parent.closeDbViewerSidePanel();
+        } else {
+          window.parent.postMessage({ action: 'closeDbViewer' }, '*');
+        }
+      } else {
+        window.close();
+      }
+    });
   }
 
   // Event delegation for day toggles and actions menu

@@ -236,6 +236,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnToggleDev = document.getElementById('btn-toggle-dev');
     if (btnToggleDev) btnToggleDev.style.display = 'none';
   }
+
+  // Bind DB Viewer Side Panel Close actions
+  const closeSidePanelBtn = document.getElementById('btn-close-side-panel');
+  if (closeSidePanelBtn) {
+    closeSidePanelBtn.addEventListener('click', closeDbViewerSidePanel);
+  }
+  const backdropEl = document.getElementById('db-viewer-backdrop');
+  if (backdropEl) {
+    backdropEl.addEventListener('click', closeDbViewerSidePanel);
+  }
+
+  // Event delegation for Active User Profiles table (to prevent inline event CSP violations in Manifest V3)
+  const usersTbody = document.getElementById('users-tbody');
+  if (usersTbody) {
+    usersTbody.addEventListener('click', (e) => {
+      // 1. Check if gmail-link is clicked
+      const gmailLink = e.target.closest('.gmail-link');
+      if (gmailLink) {
+        e.stopPropagation();
+        const uid = gmailLink.getAttribute('data-uid');
+        const email = gmailLink.getAttribute('data-email');
+        if (uid) {
+          openUserDbViewer(uid, email);
+        }
+        return;
+      }
+
+      // 2. Check if day-header is clicked (accordion inside expanded row details)
+      const dayHeader = e.target.closest('.day-header');
+      if (dayHeader) {
+        e.stopPropagation();
+        const day = dayHeader.getAttribute('data-day');
+        if (day) {
+          toggleDayExpand(day);
+        }
+        return;
+      }
+
+      // 3. Check if expandable-row itself is clicked (main user rows)
+      const expandableRow = e.target.closest('.expandable-row');
+      if (expandableRow) {
+        const uid = expandableRow.getAttribute('data-uid');
+        if (uid) {
+          toggleUserExpand(uid);
+        }
+        return;
+      }
+    });
+  }
 });
 
 // ── AUTHENTICATION ───────────────────────────────────────────────────────────
@@ -510,9 +559,13 @@ function renderUsersDashboard() {
     const rowClass = isExpanded ? 'expandable-row active-expanded' : 'expandable-row';
     
     rowsHtml += `
-      <tr class="${rowClass}" onclick="toggleUserExpand('${uid}')">
+      <tr class="${rowClass}" data-uid="${uid}">
         <td style="font-family:'Share Tech Mono', monospace; color: var(--text-mute);">${index + 1}</td>
-        <td style="font-family:'Share Tech Mono', monospace; font-weight:600; color:var(--neon);">${escapeHTML(userDisplayName)}</td>
+        <td style="font-family:'Share Tech Mono', monospace; font-weight:600; color:var(--neon);">
+          <span class="gmail-link" style="cursor:pointer; text-decoration:underline; text-underline-offset:3px;" data-uid="${uid}" data-email="${escapeHTML(userDisplayName)}">
+            ${escapeHTML(userDisplayName)}
+          </span>
+        </td>
         <td style="font-family:'Share Tech Mono', monospace;">${totalSolved} solved</td>
         <td style="font-family:'Share Tech Mono', monospace;">${activeDays.size} days</td>
         <td style="font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim);">${lastActive}</td>
@@ -681,7 +734,7 @@ function renderUserSolvesAccordion(solves) {
 
     return `
       <div class="day-block">
-        <div class="day-header" onclick="event.stopPropagation(); toggleDayExpand('${day}')">
+        <div class="day-header" data-day="${day}">
           <div style="font-weight:600; color:var(--text);">${dayFmt}</div>
           <div style="display:flex; align-items:center; gap:12px;">
             <div>${diffPills}</div>
@@ -830,3 +883,53 @@ async function handleClearAllErrors() {
     }
   );
 }
+
+// ── DB VIEWER SIDE PANEL ──────────────────────────────────────────────────────
+function openUserDbViewer(uid, email) {
+  const panel = document.getElementById('db-viewer-side-panel');
+  const backdrop = document.getElementById('db-viewer-backdrop');
+  const emailEl = document.getElementById('side-panel-user-email');
+  const iframe = document.getElementById('db-viewer-iframe');
+  
+  if (!panel || !backdrop || !emailEl || !iframe) return;
+  
+  emailEl.textContent = email;
+  iframe.src = `../db-viewer.html?adminMode=true&uid=${uid}`;
+  
+  // Show backdrop first
+  backdrop.style.display = 'block';
+  setTimeout(() => {
+    backdrop.classList.add('active');
+    panel.classList.add('active');
+  }, 20);
+}
+
+function closeDbViewerSidePanel() {
+  const panel = document.getElementById('db-viewer-side-panel');
+  const backdrop = document.getElementById('db-viewer-backdrop');
+  const iframe = document.getElementById('db-viewer-iframe');
+  
+  if (!panel || !backdrop || !iframe) return;
+  
+  panel.classList.remove('active');
+  backdrop.classList.remove('active');
+  
+  setTimeout(() => {
+    backdrop.style.display = 'none';
+    iframe.src = ''; // reset source to free memory/iframe context
+  }, 300);
+}
+
+// Bind to window to ensure global availability
+window.openUserDbViewer = openUserDbViewer;
+window.closeDbViewerSidePanel = closeDbViewerSidePanel;
+window.getUserSolves = function(uid) {
+  return ALL_SOLVES.filter(s => s.userId === uid);
+};
+
+// Listen for closeDbViewer message from iframe (postMessage fallback)
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'closeDbViewer') {
+    closeDbViewerSidePanel();
+  }
+});
